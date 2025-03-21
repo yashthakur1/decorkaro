@@ -1,4 +1,3 @@
-
 import { useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Calendar } from '@/components/ui/calendar';
@@ -14,7 +13,7 @@ import { toast } from 'sonner';
 
 const Booking = () => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, threshold: 0.1 });
+  const isInView = useInView(ref, { once: true, amount: 0.1 });
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
