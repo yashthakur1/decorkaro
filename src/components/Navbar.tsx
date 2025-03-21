@@ -47,9 +47,9 @@ const Navbar = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="font-display text-2xl font-semibold"
+            className="font-display text-2xl font-semibold tracking-tight"
           >
-            Designify
+            Urban Decor
             <span className="text-primary">.</span>
           </motion.div>
         </Link>
