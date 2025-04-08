@@ -98,7 +98,7 @@ const Hero = () => {
               transition={{ delay: 0.3 }}
               className="flex flex-wrap gap-4"
             >
-              <Button asChild size="lg" className="text-md rounded-full px-8 py-6">
+              <Button asChild size="lg" className="text-md rounded-full px-8 py-6 bg-primary hover:bg-primary/90">
                 <Link to="/contact">LET'S TALK</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="text-md rounded-full px-8 py-6 border-primary/20 hover:bg-primary/5">

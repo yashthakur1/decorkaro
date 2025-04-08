@@ -49,7 +49,7 @@ const Navbar = () => {
             transition={{ duration: 0.5 }}
             className="font-display text-2xl font-semibold tracking-tight"
           >
-            Urban Decor
+            DecorKaro
             <span className="text-primary">.</span>
           </motion.div>
         </Link>
