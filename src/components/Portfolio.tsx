@@ -14,34 +14,34 @@ type Project = {
   link: string;
 };
 
-// Updated projects with the new uploaded images
+// Updated projects with the correct URL format
 const projects: Project[] = [
   {
     id: 1,
     title: 'Modern Bedroom Suite',
     category: 'Residential',
-    image: 'public/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png',
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png',
     link: '/projects/modern-bedroom'
   },
   {
     id: 2,
     title: 'Elegant Bedroom Design',
     category: 'Residential',
-    image: 'public/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png',
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png',
     link: '/projects/elegant-bedroom'
   },
   {
     id: 3,
     title: 'Contemporary Living Room',
     category: 'Residential',
-    image: 'public/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png',
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png',
     link: '/projects/contemporary-living'
   },
   {
     id: 4,
     title: 'Minimalist Bedroom',
     category: 'Residential',
-    image: 'public/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png',
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png',
     link: '/projects/minimalist-bedroom'
   }
 ];

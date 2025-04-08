@@ -19,34 +19,34 @@ type VideoProject = {
   videoUrl?: string;
 };
 
-// Sample videos using the remaining uploaded images as thumbnails
+// Sample videos using the updated URL format for thumbnails
 const videoProjects: VideoProject[] = [
   {
     id: 1,
     title: "Living Room Transformation",
     category: "Residential",
-    thumbnail: "public/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png",
     videoUrl: "#"
   },
   {
     id: 2,
     title: "Wardrobe Design Process",
     category: "Residential",
-    thumbnail: "public/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png",
     videoUrl: "#"
   },
   {
     id: 3,
     title: "Master Bedroom Styling",
     category: "Residential",
-    thumbnail: "public/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png",
     videoUrl: "#"
   },
   {
     id: 4,
     title: "Kitchen Design Solutions",
     category: "Residential",
-    thumbnail: "public/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png",
     videoUrl: "#"
   }
 ];

@@ -16,14 +16,14 @@ type VideoProject = {
   videoUrl?: string;
 };
 
-// Sample videos using the uploaded images as thumbnails
+// Sample videos using the updated URL format for thumbnails
 const videoProjects: VideoProject[] = [
   {
     id: 1,
     title: "Living Room Transformation",
     category: "Residential",
     description: "See how we transformed this space from concept to completion with custom furniture and lighting solutions.",
-    thumbnail: "public/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png",
     videoUrl: "#"
   },
   {
@@ -31,7 +31,7 @@ const videoProjects: VideoProject[] = [
     title: "Wardrobe Design Process",
     category: "Residential",
     description: "Our detailed approach to designing and implementing custom storage solutions for modern homes.",
-    thumbnail: "public/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png",
     videoUrl: "#"
   },
   {
@@ -39,7 +39,7 @@ const videoProjects: VideoProject[] = [
     title: "Master Bedroom Styling",
     category: "Residential", 
     description: "Watch our designers create a serene and functional bedroom space with attention to every detail.",
-    thumbnail: "public/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png",
     videoUrl: "#"
   },
   {
@@ -47,7 +47,7 @@ const videoProjects: VideoProject[] = [
     title: "Kitchen Design Solutions",
     category: "Residential",
     description: "A walkthrough of our modern kitchen design with insights into the materials and appliances selected.",
-    thumbnail: "public/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png",
     videoUrl: "#"
   },
   {
@@ -55,7 +55,7 @@ const videoProjects: VideoProject[] = [
     title: "Bedroom Makeover",
     category: "Residential",
     description: "The complete transformation process of a standard bedroom into a luxurious retreat.",
-    thumbnail: "public/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png",
     videoUrl: "#"
   },
   {
@@ -63,7 +63,7 @@ const videoProjects: VideoProject[] = [
     title: "Art-Inspired Bedroom",
     category: "Residential",
     description: "See how we incorporated art elements into this beautiful bedroom redesign.",
-    thumbnail: "public/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png",
     videoUrl: "#"
   },
   {
@@ -71,7 +71,7 @@ const videoProjects: VideoProject[] = [
     title: "Living Area Design Timeline",
     category: "Residential",
     description: "A time-lapse video showing the complete redesign of this modern living space.",
-    thumbnail: "public/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png",
     videoUrl: "#"
   },
   {
@@ -79,7 +79,7 @@ const videoProjects: VideoProject[] = [
     title: "Minimalist Bedroom Creation",
     category: "Residential",
     description: "Our approach to creating a clean, functional, and aesthetically pleasing bedroom space.",
-    thumbnail: "public/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png",
+    thumbnail: "https://decorkaro.bitroot.org/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png",
     videoUrl: "#"
   }
 ];

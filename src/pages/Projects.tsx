@@ -24,7 +24,7 @@ const projects: Project[] = [
     location: 'Mumbai, India',
     year: '2023',
     description: 'A contemporary bedroom with custom wardrobe integration and elegant lighting design.',
-    image: 'public/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png'
   },
   {
     id: 2,
@@ -33,7 +33,7 @@ const projects: Project[] = [
     location: 'Delhi, India',
     year: '2023',
     description: 'An artistic bedroom featuring modern storage solutions and statement wall art.',
-    image: 'public/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png'
   },
   {
     id: 3,
@@ -42,7 +42,7 @@ const projects: Project[] = [
     location: 'Bangalore, India',
     year: '2022',
     description: 'Open-concept living space with dining area integration and modern decor elements.',
-    image: 'public/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png'
   },
   {
     id: 4,
@@ -51,7 +51,7 @@ const projects: Project[] = [
     location: 'Pune, India',
     year: '2023',
     description: 'Clean lines and functional design with built-in storage and natural lighting.',
-    image: 'public/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png'
   },
   {
     id: 5,
@@ -60,7 +60,7 @@ const projects: Project[] = [
     location: 'Mumbai, India',
     year: '2022',
     description: 'Elegant living space with marble accents, custom lighting, and designer furniture.',
-    image: 'public/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png'
   },
   {
     id: 6,
@@ -69,7 +69,7 @@ const projects: Project[] = [
     location: 'Gurgaon, India',
     year: '2023',
     description: 'Custom storage system with integrated dressing area and premium finishes.',
-    image: 'public/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png'
   },
   {
     id: 7,
@@ -78,7 +78,7 @@ const projects: Project[] = [
     location: 'Hyderabad, India',
     year: '2023',
     description: 'Contemporary living space with seamless flow and balanced aesthetic elements.',
-    image: 'public/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png'
   },
   {
     id: 8,
@@ -87,7 +87,7 @@ const projects: Project[] = [
     location: 'Chennai, India',
     year: '2022',
     description: 'Modern parallel kitchen with high-end appliances and functional storage solutions.',
-    image: 'public/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png'
+    image: 'https://decorkaro.bitroot.org/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png'
   }
 ];
 
