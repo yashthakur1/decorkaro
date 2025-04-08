@@ -19,75 +19,75 @@ type Project = {
 const projects: Project[] = [
   {
     id: 1,
-    title: 'Minimalist Apartment',
+    title: 'Modern Bedroom Suite',
     category: 'Residential',
     location: 'Mumbai, India',
     year: '2023',
-    description: 'A sleek, minimalist apartment design that maximizes space and light.',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=800&auto=format&fit=crop'
+    description: 'A contemporary bedroom with custom wardrobe integration and elegant lighting design.',
+    image: 'public/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png'
   },
   {
     id: 2,
-    title: 'Luxury Villa Redesign',
+    title: 'Elegant Bedroom Design',
     category: 'Residential',
     location: 'Delhi, India',
-    year: '2022',
-    description: 'Complete redesign of a luxury villa with elegant, contemporary aesthetics.',
-    image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=800&auto=format&fit=crop'
+    year: '2023',
+    description: 'An artistic bedroom featuring modern storage solutions and statement wall art.',
+    image: 'public/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png'
   },
   {
     id: 3,
-    title: 'Corporate Office',
-    category: 'Commercial',
+    title: 'Contemporary Living Room',
+    category: 'Residential',
     location: 'Bangalore, India',
-    year: '2023',
-    description: 'A modern workspace designed to foster creativity and collaboration.',
-    image: 'https://images.unsplash.com/photo-1497215842964-222b430dc094?q=80&w=800&auto=format&fit=crop'
+    year: '2022',
+    description: 'Open-concept living space with dining area integration and modern decor elements.',
+    image: 'public/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png'
   },
   {
     id: 4,
-    title: 'Boutique Hotel',
-    category: 'Hospitality',
-    location: 'Goa, India',
-    year: '2022',
-    description: 'A boutique hotel that blends luxury with local cultural elements.',
-    image: 'https://images.unsplash.com/photo-1568495248636-6432b97bd949?q=80&w=800&auto=format&fit=crop'
-  },
-  {
-    id: 5,
-    title: 'Modern Restaurant',
-    category: 'Hospitality',
-    location: 'Mumbai, India',
-    year: '2022',
-    description: 'A contemporary dining space with a focus on ambiance and experience.',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=800&auto=format&fit=crop'
-  },
-  {
-    id: 6,
-    title: 'Urban Loft',
+    title: 'Minimalist Bedroom',
     category: 'Residential',
     location: 'Pune, India',
     year: '2023',
-    description: 'An industrial-inspired loft with modern finishes and open concept.',
-    image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?q=80&w=800&auto=format&fit=crop'
+    description: 'Clean lines and functional design with built-in storage and natural lighting.',
+    image: 'public/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png'
+  },
+  {
+    id: 5,
+    title: 'Luxury Living Room',
+    category: 'Residential',
+    location: 'Mumbai, India',
+    year: '2022',
+    description: 'Elegant living space with marble accents, custom lighting, and designer furniture.',
+    image: 'public/lovable-uploads/cdd8a9f0-b967-407d-905a-d07ce7b7acd4.png'
+  },
+  {
+    id: 6,
+    title: 'Designer Wardrobe Solutions',
+    category: 'Residential',
+    location: 'Gurgaon, India',
+    year: '2023',
+    description: 'Custom storage system with integrated dressing area and premium finishes.',
+    image: 'public/lovable-uploads/7b948f43-5325-4d0a-af9a-e8c00c48c4d6.png'
   },
   {
     id: 7,
-    title: 'Tech Startup Office',
-    category: 'Commercial',
+    title: 'Modern Apartment Design',
+    category: 'Residential',
     location: 'Hyderabad, India',
     year: '2023',
-    description: 'A vibrant office space designed for innovation and flexibility.',
-    image: 'https://images.unsplash.com/photo-1572025442646-866d16c84a54?q=80&w=800&auto=format&fit=crop'
+    description: 'Contemporary living space with seamless flow and balanced aesthetic elements.',
+    image: 'public/lovable-uploads/a471fd36-d23f-40a5-85fa-52c4ffa99ee1.png'
   },
   {
     id: 8,
-    title: 'Wellness Spa Center',
-    category: 'Commercial',
+    title: 'Premium Kitchen Design',
+    category: 'Residential',
     location: 'Chennai, India',
     year: '2022',
-    description: 'A tranquil spa environment focused on relaxation and rejuvenation.',
-    image: 'https://images.unsplash.com/photo-1519690889869-e705e59f72e1?q=80&w=800&auto=format&fit=crop'
+    description: 'Modern parallel kitchen with high-end appliances and functional storage solutions.',
+    image: 'public/lovable-uploads/bd9f69ce-9be4-4594-990e-40d9fd3db422.png'
   }
 ];
 

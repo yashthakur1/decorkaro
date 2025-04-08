@@ -1,8 +1,10 @@
+
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 type Project = {
   id: number;
@@ -12,34 +14,35 @@ type Project = {
   link: string;
 };
 
+// Updated projects with the new uploaded images
 const projects: Project[] = [
   {
     id: 1,
-    title: 'Minimalist Apartment',
+    title: 'Modern Bedroom Suite',
     category: 'Residential',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=800&auto=format&fit=crop',
-    link: '/projects/minimalist-apartment'
+    image: 'public/lovable-uploads/b3ad8244-e6a4-4abc-87a5-270c036e4f42.png',
+    link: '/projects/modern-bedroom'
   },
   {
     id: 2,
-    title: 'Luxury Villa Redesign',
+    title: 'Elegant Bedroom Design',
     category: 'Residential',
-    image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?q=80&w=800&auto=format&fit=crop',
-    link: '/projects/luxury-villa'
+    image: 'public/lovable-uploads/82bcdf67-5ead-4267-8082-09a7108ab59a.png',
+    link: '/projects/elegant-bedroom'
   },
   {
     id: 3,
-    title: 'Corporate Office',
-    category: 'Commercial',
-    image: 'https://images.unsplash.com/photo-1497215842964-222b430dc094?q=80&w=800&auto=format&fit=crop',
-    link: '/projects/corporate-office'
+    title: 'Contemporary Living Room',
+    category: 'Residential',
+    image: 'public/lovable-uploads/af4735be-f647-4dea-9572-dd9ae06dc521.png',
+    link: '/projects/contemporary-living'
   },
   {
     id: 4,
-    title: 'Boutique Hotel',
-    category: 'Hospitality',
-    image: 'https://images.unsplash.com/photo-1568495248636-6432b97bd949?q=80&w=800&auto=format&fit=crop',
-    link: '/projects/boutique-hotel'
+    title: 'Minimalist Bedroom',
+    category: 'Residential',
+    image: 'public/lovable-uploads/c0836c0a-e7d8-4a66-8360-91c4b356d497.png',
+    link: '/projects/minimalist-bedroom'
   }
 ];
 
@@ -94,13 +97,15 @@ const Portfolio = () => {
             <motion.div
               key={project.id}
               variants={itemVariants}
-              className="portfolio-item aspect-[4/3]"
+              className="portfolio-item rounded-xl overflow-hidden"
             >
-              <img 
-                src={project.image} 
-                alt={project.title} 
-                className="w-full h-full object-cover"
-              />
+              <AspectRatio ratio={4/3}>
+                <img 
+                  src={project.image} 
+                  alt={project.title} 
+                  className="w-full h-full object-cover"
+                />
+              </AspectRatio>
               <div className="portfolio-overlay">
                 <div className="text-center p-6">
                   <span className="text-white/80 text-sm uppercase tracking-widest mb-2 block">

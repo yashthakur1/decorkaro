@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import Services from '@/components/Services';
 import Portfolio from '@/components/Portfolio';
+import VideoShowcase from '@/components/VideoShowcase';
 import Booking from '@/components/Booking';
 import Footer from '@/components/Footer';
 import { motion, useScroll, useSpring } from 'framer-motion';
@@ -74,6 +75,7 @@ const Index = () => {
       
       <Services />
       <Portfolio />
+      <VideoShowcase />
       <Booking />
       
       <section className="section-padding bg-accent">
