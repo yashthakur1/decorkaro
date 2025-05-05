@@ -4,7 +4,15 @@ import { Upload, Sparkles, Key } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { fal } from '@fal-ai/client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+
+// Extend Window interface to include our custom property
+declare global {
+  interface Window {
+    msg91ScriptLoaded?: boolean;
+    initSendOTP?: (config: any) => void;
+  }
+}
 
 const AIAnalysisSection: React.FC = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -17,83 +25,142 @@ const AIAnalysisSection: React.FC = () => {
   const [otpVerified, setOtpVerified] = useState(false);
 
   // Handle MSG91 OTP widget initialization and verification
+  // Load the MSG91 script only once when the modal opens
   useEffect(() => {
-    if (showOtpModal) {
-      // Inject MSG91 OTP widget script
+    // Only load the script when the modal is shown
+    if (showOtpModal && !window.msg91ScriptLoaded) {
+      console.log('Loading MSG91 OTP script...');
+      
+      // Create script element if it doesn't exist
       if (!document.getElementById('msg91-otp-script')) {
         const script = document.createElement('script');
         script.id = 'msg91-otp-script';
         script.type = 'text/javascript';
         script.src = 'https://verify.msg91.com/otp-provider.js';
+        script.async = true;
+        
+        // Set a flag when script loads successfully
         script.onload = () => {
+          console.log('MSG91 script loaded successfully');
           // @ts-ignore
-          if (typeof initSendOTP === 'function') {
-            // MSG91 configuration
-            const configuration = {
-              widgetId: '356565686c45383437363831',
-              tokenAuth: '447814TAOUnO6bAbmf68187369P1',
-              identifier: '', // Set dynamically from form if needed
-              exposeMethods: true,
-              success: (data: any) => { console.log('success response', data); },
-              failure: (error: any) => { console.log('failure reason', error); },
-    
-            };
-            // @ts-ignore
-            initSendOTP(configuration);
-          }
+          window.msg91ScriptLoaded = true;
         };
+        
+        // Handle script load errors
+        script.onerror = () => {
+          console.error('Failed to load MSG91 script');
+          alert('Unable to load verification service. Please try again later.');
+        };
+        
         document.body.appendChild(script);
-      } else {
-        // If script already loaded, re-initialize widget
-        // @ts-ignore
-        if (typeof initSendOTP === 'function') {
-          const configuration = {
-            widgetId: '356565686c45383437363831',
-            tokenAuth: '447814TAOUnO6bAbmf68187369P1',
-            identifier: '',
-            exposeMethods: true,
-            success: (data: any) => { console.log('success response', data); },
-            failure: (error: any) => { console.log('failure reason', error); },
-  
-          };
-          // @ts-ignore
-          initSendOTP(configuration);
-        }
       }
     }
-  }, [showOtpModal, otpWidgetVisible, mobile]);
+  }, [showOtpModal]);
+  
+  // Reset form state when modal closes
+  useEffect(() => {
+    if (!showOtpModal) {
+      // Reset form fields when modal is closed
+      setMobile('');
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setAcceptedTerms(false);
+      setOtpWidgetVisible(false);
+      setOtpVerified(false);
+    }
+  }, [showOtpModal]);
 
+  // Track widget initialization attempts to prevent multiple calls
+  const widgetInitialized = useRef(false);
+  
+  // Validate mobile number format (basic validation)
+  const isValidMobile = (number: string): boolean => {
+    // Basic validation for Indian mobile number (10 digits, optionally with +91 prefix)
+    const mobileRegex = /^(\+91)?[6-9]\d{9}$/;
+    return mobileRegex.test(number);
+  };
+  
   // Attach MSG91 OTP widget after clicking Continue
   const handleOtpSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mobile || !firstName || !lastName || !email || !acceptedTerms) {
+    
+    // Form validation
+    if (!mobile) {
+      alert('Please enter your mobile number');
+      return;
+    }
+    
+    if (!isValidMobile(mobile)) {
+      alert('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    
+    if (!firstName || !lastName || !email || !acceptedTerms) {
       alert('Please fill all fields and accept the terms.');
       return;
     }
+    
+    // Normalize mobile number (remove +91 if present)
+    const normalizedMobile = mobile.replace(/^\+91/, '');
+    
+    // Show OTP widget container
     setOtpWidgetVisible(true);
-    // Inject OTP widget with identifier as mobile
+    
+    // Reset previous initialization if any
+    widgetInitialized.current = false;
+    
+    // Wait for DOM to update and script to be fully loaded
     setTimeout(() => {
-      if (window && (window as any).initSendOTP) {
+      // Check if script is loaded and widget container exists
+      const widgetContainer = document.getElementById('otp-widget-container');
+      
+      if (!widgetContainer) {
+        console.error('OTP widget container not found');
+        alert('Something went wrong. Please try again.');
+        setOtpWidgetVisible(false);
+        return;
+      }
+      
+      if (!window.initSendOTP) {
+        console.error('MSG91 initSendOTP function not available');
+        alert('Verification service not loaded. Please try again later.');
+        setOtpWidgetVisible(false);
+        return;
+      }
+      
+      // Prevent multiple initialization
+      if (widgetInitialized.current) return;
+      widgetInitialized.current = true;
+      
+      console.log('Initializing MSG91 OTP widget with mobile:', normalizedMobile);
+      
+      try {
         const configuration = {
           widgetId: '356565686c45383437363831',
           tokenAuth: '447814TAOUnO6bAbmf68187369P1',
-          identifier: mobile,
+          identifier: normalizedMobile,
           exposeMethods: true,
           success: (data: any) => {
             setOtpVerified(true);
-            console.log('OTP verified, token:', data);
+            console.log('OTP verified successfully', data);
             // You can now send the full form data + token to your backend
           },
           failure: (error: any) => {
             setOtpVerified(false);
-            alert('OTP verification failed. Please try again.');
-            console.log('OTP failure:', error);
-          },
-
+            console.error('OTP verification failed:', error);
+            alert('Verification failed. Please try again.');
+          }
         };
-        (window as any).initSendOTP(configuration);
+        
+        // Initialize the widget
+        window.initSendOTP(configuration);
+      } catch (error) {
+        console.error('Error initializing OTP widget:', error);
+        alert('Something went wrong. Please try again.');
+        setOtpWidgetVisible(false);
       }
-    }, 300);
+    }, 500); // Increased timeout for better reliability
   };
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
