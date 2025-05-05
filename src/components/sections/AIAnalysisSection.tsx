@@ -36,7 +36,7 @@ const AIAnalysisSection: React.FC = () => {
               exposeMethods: true,
               success: (data: any) => { console.log('success response', data); },
               failure: (error: any) => { console.log('failure reason', error); },
-              VAR1: ''
+    
             };
             // @ts-ignore
             initSendOTP(configuration);
@@ -54,7 +54,7 @@ const AIAnalysisSection: React.FC = () => {
             exposeMethods: true,
             success: (data: any) => { console.log('success response', data); },
             failure: (error: any) => { console.log('failure reason', error); },
-            VAR1: ''
+  
           };
           // @ts-ignore
           initSendOTP(configuration);
@@ -89,7 +89,7 @@ const AIAnalysisSection: React.FC = () => {
             alert('OTP verification failed. Please try again.');
             console.log('OTP failure:', error);
           },
-          VAR1: ''
+
         };
         (window as any).initSendOTP(configuration);
       }
