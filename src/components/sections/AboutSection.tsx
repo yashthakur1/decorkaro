@@ -51,7 +51,7 @@ const AboutSection: React.FC = () => {
                 Transforming Spaces Into Living Art Since 2010
               </h2>
               <p className="text-slate-700 mb-6 font-secondary">
-                DecorKaro is a premier interior design studio based in Mumbai with a passion for creating luxurious, 
+                DecorKaro is a premier interior design studio based in Thane with a passion for creating luxurious, 
                 functional, and aesthetically pleasing spaces across India. With over a decade of experience in the 
                 industry, we've successfully completed 500+ projects spanning residential, commercial, and hospitality designs.
               </p>

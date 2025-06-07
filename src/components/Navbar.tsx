@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
           {/* Mobile Navigation Toggle */}
           <div className="flex md:hidden items-center">
             <a 
-              href="tel:+919876543210" 
+              href="tel:+919503380888" 
               className={`mr-2 p-2 rounded-full ${
                 scrolled 
                   ? 'bg-slate-900 text-white' 

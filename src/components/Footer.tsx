@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
               DecorKaro<span className="text-yellow-500">.</span>
             </h3>
             <p className="text-slate-400 mb-6 font-secondary">
-              Transform your home with affordable modular interior packages. Choose from Essentials, Premium & Luxe packages. Serving Mumbai and across India.
+              Transform your home with affordable modular interior packages. Choose from Essentials, Premium & Luxe packages. Serving Thane and across India.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-white hover:text-yellow-500 transition-colors">
@@ -53,15 +53,15 @@ const Footer: React.FC = () => {
             <ul className="space-y-4">
               <li className="flex items-start">
                 <MapPin size={20} className="mr-3 text-yellow-500 flex-shrink-0 mt-1" />
-                <span className="text-slate-400 font-secondary">DecorKaro Design Studio, 123 Design Avenue, Juhu, Mumbai - 400049, India</span>
+                <span className="text-slate-400 font-secondary">Decorkaro, Sai Baba Mandir, Behind Pipeline road, Kalher, Thane, India, 421302</span>
               </li>
               <li className="flex items-center">
                 <Phone size={20} className="mr-3 text-yellow-500 flex-shrink-0" />
-                <a href="tel:+919876543210" className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary">+91 9876 543 210</a>
+                <a href="tel:+919503380888" className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary">+91 95033 80888</a>
               </li>
               <li className="flex items-center">
                 <Mail size={20} className="mr-3 text-yellow-500 flex-shrink-0" />
-                <a href="mailto:info@decorkaro.in" className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary">info@decorkaro.in</a>
+                <a href="mailto:decorkaro.india@gmail.com" className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary">decorkaro.india@gmail.com</a>
               </li>
             </ul>
           </div>

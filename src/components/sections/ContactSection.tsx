@@ -107,7 +107,7 @@ const ContactSection: React.FC = () => {
                     className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
                       errors.phone ? 'border-red-500' : 'border-slate-300'
                     }`}
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 95033 80888"
                     {...register('phone', { required: 'Phone number is required' })}
                   />
                   {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
@@ -191,8 +191,9 @@ const ContactSection: React.FC = () => {
                   <div>
                     <h4 className="font-medium text-lg mb-1">Our Location</h4>
                     <p className="text-slate-400 font-secondary">
-                      DecorKaro Design Studio, 123 Design Avenue,<br />
-                      Juhu, Mumbai - 400049, India
+                      Decorkaro, Sai Baba Mandir,<br />
+                      Behind Pipeline road, Kalher,<br />
+                      Thane, India, 421302
                     </p>
                   </div>
                 </div>
@@ -202,8 +203,8 @@ const ContactSection: React.FC = () => {
                   <div>
                     <h4 className="font-title font-medium text-lg mb-1">Call Us</h4>
                     <p className="text-slate-400 font-secondary">
-                      <a href="tel:+919876543210" className="hover:text-yellow-500 transition-colors">
-                        +91 9876 543 210
+                      <a href="tel:+919503380888" className="hover:text-yellow-500 transition-colors">
+                        +91 95033 80888
                       </a>
                     </p>
                   </div>
@@ -214,8 +215,8 @@ const ContactSection: React.FC = () => {
                   <div>
                     <h4 className="font-title font-medium text-lg mb-1">Email Us</h4>
                     <p className="text-slate-400 font-secondary">
-                      <a href="mailto:info@decorkaro.in" className="hover:text-yellow-500 transition-colors">
-                        info@decorkaro.in
+                      <a href="mailto:decorkaro.india@gmail.com" className="hover:text-yellow-500 transition-colors">
+                        decorkaro.india@gmail.com
                       </a>
                     </p>
                   </div>
@@ -226,8 +227,8 @@ const ContactSection: React.FC = () => {
                   <div>
                     <h4 className="font-title font-medium text-lg mb-1">WhatsApp</h4>
                     <p className="text-slate-400 font-secondary">
-                      <a href="https://wa.me/919876543210" className="hover:text-yellow-500 transition-colors">
-                        +91 9876 543 210
+                      <a href="https://wa.me/919503380888" className="hover:text-yellow-500 transition-colors">
+                        +91 95033 80888
                       </a>
                     </p>
                   </div>
@@ -279,11 +280,11 @@ const ContactSection: React.FC = () => {
                 </li>
               </ul>
               <a 
-                href="tel:+919876543210" 
+                href="tel:+919503380888" 
                 className="inline-flex items-center font-title font-medium text-yellow-500 hover:text-yellow-400 transition-colors"
               >
                 <Phone size={18} className="mr-2" />
-                Call Now: +91 9876 543 210
+                Call Now: +91 95033 80888
               </a>
             </div>
           </motion.div>

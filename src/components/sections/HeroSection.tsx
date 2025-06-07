@@ -9,7 +9,7 @@ const HeroSection: React.FC = () => {
     {
       image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
       title: 'Transform Your Space',
-      subtitle: 'Creating stunning interiors across India, starting from Mumbai'
+      subtitle: 'Creating stunning interiors across India, starting from Thane'
     },
     {
       image: 'https://images.pexels.com/photos/276528/pexels-photo-276528.jpeg',
