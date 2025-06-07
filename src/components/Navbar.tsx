@@ -1,127 +1,138 @@
-
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Menu, X, Phone } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
-const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  
+const Navbar: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
+      const offset = window.scrollY;
+      if (offset > 50) {
+        setScrolled(true);
       } else {
-        setIsScrolled(false);
+        setScrolled(false);
       }
     };
-    
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
-  
-  const isActive = (path: string) => location.pathname === path;
-  
-  const navLinks = [
-    { label: 'Home', path: '/' },
-    { label: 'About', path: '/about' },
-    { label: 'Services', path: '/services' },
-    { label: 'Projects', path: '/projects' },
-    { label: 'Videos', path: '/videos' },
-    { label: 'Contact', path: '/contact' },
-  ];
-  
+
   return (
-    <header 
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 sm:px-8 md:px-12 lg:px-24',
-        isScrolled ? 'py-4 bg-white/90 backdrop-blur-md shadow-sm' : 'py-6'
-      )}
+    <nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'bg-white shadow-md text-slate-900 py-3' 
+          : 'bg-transparent text-white py-5'
+      }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/" className="relative z-10">
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="font-display text-2xl font-semibold tracking-tight"
-          >
-            DecorKaro
-            <span className="text-primary">.</span>
-          </motion.div>
-        </Link>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
-          {navLinks.map((link) => (
-            <Link 
-              key={link.path} 
-              to={link.path}
-              className={cn(
-                "nav-link font-medium transition-colors",
-                isActive(link.path) ? "text-primary" : "text-foreground/80 hover:text-primary"
-              )}
+      <div className="container mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex justify-between items-center">
+          <Link to="/" className="flex items-center">
+            <span className="font-title text-2xl font-bold tracking-tight">
+              DecorKaro
+              <span className="text-yellow-500">.</span>
+            </span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-8">
+            <a href="#about" className="hover:text-yellow-500 transition-colors font-title">About</a>
+            <a href="#services" className="hover:text-yellow-500 transition-colors font-title">Services</a>
+            <a href="#packages" className="hover:text-yellow-500 transition-colors font-title">Packages</a>
+            <a href="#testimonials" className="hover:text-yellow-500 transition-colors font-title">Testimonials</a>
+            <a 
+              href="#contact" 
+              className={`px-4 py-2 rounded-md font-title ${
+                scrolled 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-yellow-500 text-slate-900'
+              } hover:bg-yellow-600 transition-colors`}
             >
-              {link.label}
-            </Link>
-          ))}
-          <Button asChild className="ml-4">
-            <Link to="/contact">Book Consultation</Link>
-          </Button>
-        </nav>
-        
-        {/* Mobile Menu Button */}
-        <div className="md:hidden">
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-            className="p-2"
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
+              Book Now
+            </a>
+          </div>
+
+          {/* Mobile Navigation Toggle */}
+          <div className="flex md:hidden items-center">
+            <a 
+              href="tel:+919503380888" 
+              className={`mr-2 p-2 rounded-full ${
+                scrolled 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-yellow-500 text-slate-900'
+              }`}
+            >
+              <Phone size={20} />
+            </a>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className={`p-2 rounded-md ${
+                scrolled 
+                  ? 'text-slate-900' 
+                  : 'text-white'
+              }`}
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
-      
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <motion.div
+
+      {/* Mobile Menu */}
+      {isOpen && (
+        <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 top-[80px] bg-background z-40 flex flex-col p-6"
+          transition={{ duration: 0.2 }}
+          className="md:hidden bg-white shadow-lg"
         >
-          <nav className="flex flex-col space-y-6 pt-8">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.path} 
-                to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "text-xl font-medium py-1",
-                  isActive(link.path) ? "text-primary" : "text-foreground/80"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <Button asChild className="mt-4 w-full">
-              <Link to="/contact" onClick={() => setMobileMenuOpen(false)}>
-                Book Consultation
-              </Link>
-            </Button>
-          </nav>
+          <div className="flex flex-col space-y-3 px-4 pt-2 pb-4">
+            <a 
+              href="#about" 
+              className="py-2 px-4 text-slate-900 hover:bg-slate-100 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              About
+            </a>
+            <a 
+              href="#services" 
+              className="py-2 px-4 text-slate-900 hover:bg-slate-100 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Services
+            </a>
+            <a 
+              href="#portfolio" 
+              className="py-2 px-4 text-slate-900 hover:bg-slate-100 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Portfolio
+            </a>
+            <a 
+              href="#testimonials" 
+              className="py-2 px-4 text-slate-900 hover:bg-slate-100 rounded-md"
+              onClick={() => setIsOpen(false)}
+            >
+              Testimonials
+            </a>
+            <a 
+              href="#contact" 
+              className="py-2 px-4 bg-yellow-500 text-slate-900 hover:bg-yellow-600 rounded-md text-center"
+              onClick={() => setIsOpen(false)}
+            >
+              Book Now
+            </a>
+          </div>
         </motion.div>
       )}
-    </header>
+    </nav>
   );
 };
 
