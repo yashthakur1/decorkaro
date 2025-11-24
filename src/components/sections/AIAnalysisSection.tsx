@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Sparkles, Key } from 'lucide-react';
-import { fal } from '@fal-ai/client';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const AIAnalysisSection: React.FC = () => {
   // State for file handling
@@ -43,41 +43,63 @@ const AIAnalysisSection: React.FC = () => {
     setError(null);
 
     try {
-      // Configure fal client with the user-provided API key
-      fal.config({ credentials: apiKey });
+      // Initialize Google Generative AI with the user-provided API key
+      const genAI = new GoogleGenerativeAI(apiKey);
 
       if (!selectedFile) {
         throw new Error('No image file selected');
       }
 
-      // Upload the file to fal storage
-      const imageUrl = await fal.storage.upload(selectedFile);
-
-      // Call the Fal.ai flux kontext API
-      const result = await fal.subscribe("fal-ai/flux-pro/kontext", {
-        input: {
-          prompt: "Rethink this exact room structure with a better interior, minimal yet premium",
-          image_url: imageUrl,
-        },
-        logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS") {
-            update.logs.map((log) => log.message).forEach(console.log);
+      // Convert image to base64
+      const imageData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            // Extract base64 data from data URL
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+          } else {
+            reject(new Error('Failed to read image file'));
           }
-        },
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedFile);
       });
 
-      console.log(result.data);
-      console.log(result.requestId);
+      // Use Gemini Pro Vision model for image analysis
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-      // Extract the image URL from the result data
-      const generatedImageUrl = typeof result.data.images?.[0] === 'string' 
-        ? result.data.images[0] 
-        : result.data.images?.[0]?.url || null;
+      const analysisPrompt = `You are an expert interior designer. Analyze this room image and provide detailed design recommendations to create a minimal yet premium interior.
+
+Please provide:
+1. Current room assessment (style, layout, strengths, weaknesses)
+2. Specific design improvements for walls, flooring, furniture, and lighting
+3. Color palette recommendations
+4. Furniture and decor suggestions
+5. Budget-friendly alternatives where applicable
+
+Focus on maintaining the room's structure while elevating the design with carefully selected elements.`;
+
+      // Prepare image parts for Gemini
+      const imageParts = [
+        {
+          inlineData: {
+            data: imageData,
+            mimeType: selectedFile.type || 'image/jpeg'
+          }
+        }
+      ];
+
+      // Generate content with the image and prompt
+      const result = await model.generateContent([analysisPrompt, ...imageParts]);
+      const response = await result.response;
+      const text = response.text();
+
+      console.log('Gemini Analysis:', text);
 
       setResult({
-        text: "Here's an AI-generated redesign of your room with a minimal yet premium interior. The transformation maintains the exact room structure while elevating the design with carefully selected elements and improved aesthetics.",
-        image: generatedImageUrl
+        text: text,
+        image: preview // Show the original uploaded image for reference
       });
       setShowApiKeyInput(false);
     } catch (error) {
@@ -163,7 +185,7 @@ const AIAnalysisSection: React.FC = () => {
                   AI Design Analysis
                 </h3>
                 <p className="text-slate-700">
-                  Enter your Fal.ai API key to generate AI design suggestions
+                  Enter your Google Gemini API key to generate AI design suggestions
                 </p>
               </div>
               
@@ -184,14 +206,14 @@ const AIAnalysisSection: React.FC = () => {
               {result.image ? (
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <h4 className="font-serif text-xl font-bold text-slate-900 mb-6">
-                    AI Analysis Results
+                    Gemini AI Design Recommendations
                   </h4>
-                  <img 
-                    src={result.image} 
-                    alt="AI-generated design" 
+                  <img
+                    src={result.image}
+                    alt="Your room"
                     className="w-full h-64 object-cover rounded-lg mb-6"
                   />
-                  <p className="text-slate-700 whitespace-pre-line">{result.text}</p>
+                  <div className="text-slate-700 whitespace-pre-line prose prose-slate max-w-none">{result.text}</div>
                   
                   <div className="mt-6 text-center">
                     <button
@@ -219,15 +241,15 @@ const AIAnalysisSection: React.FC = () => {
                   
                   <div className="relative">
                     <Key className="absolute top-3 left-3 text-slate-400" size={16} />
-                    <input 
+                    <input
                       type="password"
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Enter your Fal.ai API key"
+                      placeholder="Enter your Google Gemini API key"
                       className="w-full py-3 pl-10 pr-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     />
                     <p className="text-xs text-slate-500 mt-2">
-                      Get your API key from <a href="https://fal.ai/dashboard" target="_blank" rel="noopener noreferrer" className="text-yellow-600 underline hover:text-yellow-700">fal.ai/dashboard</a>
+                      Get your API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-yellow-600 underline hover:text-yellow-700">Google AI Studio</a>
                     </p>
                   </div>
                   
