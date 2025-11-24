@@ -66,16 +66,33 @@ const AIAnalysisSection: React.FC = () => {
         reader.readAsDataURL(selectedFile);
       });
 
-      const imageGenerationPrompt = `Transform this room into a minimal yet premium interior design.
-Maintain the room's exact structure and layout, but upgrade:
-- Wall colors to sophisticated neutrals or warm tones
-- Flooring with modern materials (hardwood, marble, or premium tiles)
-- Furniture with sleek, contemporary pieces
-- Lighting with elegant fixtures and warm ambient lighting
-- Add premium decor elements like artwork, plants, or sculptural pieces
-- Create a cohesive, upscale aesthetic with attention to detail
+      const imageGenerationPrompt = `You are a premium interior designer. Analyze this image and create a stunning visualization:
 
-Style: Minimal, modern, premium, sophisticated`;
+IF THIS IS A FLOOR PLAN (architectural 2D drawing):
+- Transform it into a realistic 3D rendered visualization of the furnished space
+- Show how the space would look with premium furniture and decor
+- Use a bird's eye or isometric view that shows the layout clearly
+- Add sophisticated furniture arrangements that fit the floor plan
+- Include modern, minimal, and premium design elements
+
+IF THIS IS AN EMPTY ROOM/HOUSE PHOTO (3D photograph):
+- Furnish and decorate the space with premium interior design
+- Maintain the exact room structure, walls, windows, and architectural features
+- Add sophisticated furniture with sleek, contemporary pieces
+- Use elegant color palettes with neutrals or warm tones
+- Include premium flooring (hardwood, marble, or high-end tiles)
+- Add ambient lighting with elegant fixtures
+- Include tasteful decor elements (artwork, plants, sculptural pieces)
+
+Design Style Requirements (for both):
+- Minimal yet luxurious aesthetic
+- Modern and sophisticated
+- High-end materials and finishes
+- Cohesive color scheme
+- Attention to spatial balance and flow
+- Premium quality throughout
+
+Create a photorealistic visualization that showcases the space's full potential.`;
 
       // Use Gemini 2.5 Flash Image for image generation (Nano Banana API)
       const response = await ai.models.generateContent({
@@ -117,7 +134,7 @@ Style: Minimal, modern, premium, sophisticated`;
         : preview; // Fallback to original if no image generated
 
       setResult({
-        text: analysisText || 'Room redesign generated successfully!',
+        text: analysisText || 'Your premium space visualization has been generated successfully!',
         image: generatedImageUrl
       });
       setShowApiKeyInput(false);
@@ -156,10 +173,10 @@ Style: Minimal, modern, premium, sophisticated`;
             </div>
             <div className="flex-1 text-center md:text-left">
               <h2 className="font-title text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-                AI-Powered Room Redesign
+                AI-Powered Room & Floor Plan Visualization
               </h2>
               <p className="text-slate-700 font-secondary mb-3">
-                Upload a photo and let our AI generate a premium redesign of your room.
+                Upload a floor plan or empty house photo and let our AI visualize a premium redesign.
               </p>
               <div className="mt-6">
                 <div 
@@ -175,7 +192,7 @@ Style: Minimal, modern, premium, sophisticated`;
                   ) : (
                     <div className="flex flex-col items-center">
                       <Upload className="text-slate-400 mb-4" size={48} />
-                      <p className="text-slate-700">Click to upload room photo</p>
+                      <p className="text-slate-700">Click to upload floor plan or room photo</p>
                       <p className="text-slate-500 text-sm mt-2">JPG, PNG up to 5MB</p>
                     </div>
                   )}
@@ -211,10 +228,10 @@ Style: Minimal, modern, premium, sophisticated`;
             <div className="bg-slate-50 rounded-xl p-8 shadow-sm">
               <div className="text-center mb-8">
                 <h3 className="font-title text-xl font-bold text-slate-900 mb-2">
-                  AI Room Redesign Generator
+                  AI Space Visualization Generator
                 </h3>
                 <p className="text-slate-700">
-                  Enter your Google Gemini API key to generate a redesigned version of your room
+                  Enter your Google Gemini API key to generate a premium redesign visualization
                 </p>
               </div>
               
@@ -235,7 +252,7 @@ Style: Minimal, modern, premium, sophisticated`;
               {result.image ? (
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <h4 className="font-serif text-xl font-bold text-slate-900 mb-6">
-                    Your Redesigned Room
+                    Your Redesigned Space
                   </h4>
                   <img
                     src={result.image}
@@ -258,7 +275,7 @@ Style: Minimal, modern, premium, sophisticated`;
                       }}
                       className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-colors"
                     >
-                      Redesign Another Room
+                      Visualize Another Space
                     </button>
                   </div>
                 </div>
@@ -308,7 +325,7 @@ Style: Minimal, modern, premium, sophisticated`;
                           : 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
                       }`}
                     >
-                      {isLoading ? 'Generating Redesign...' : 'Generate Room Redesign'}
+                      {isLoading ? 'Generating Visualization...' : 'Generate Visualization'}
                     </button>
                   </div>
                 </div>
