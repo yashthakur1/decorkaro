@@ -77,9 +77,9 @@ Please provide:
 
 Focus on maintaining the room's structure while elevating the design with carefully selected elements.`;
 
-      // Use Gemini 3 Pro Image (Nano Banana Pro) for image analysis
+      // Use Gemini 2.0 Flash for image analysis (better quota limits)
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-image-preview',
+        model: 'gemini-2.0-flash-exp',
         contents: [
           {
             role: 'user',
@@ -106,7 +106,17 @@ Focus on maintaining the room's structure while elevating the design with carefu
       setShowApiKeyInput(false);
     } catch (error) {
       console.error('Error analyzing image:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to analyze image. Please try again.';
+      let errorMessage = 'Failed to analyze image. Please try again.';
+
+      if (error instanceof Error) {
+        // Check for rate limit errors
+        if (error.message.includes('429') || error.message.includes('quota') || error.message.includes('RESOURCE_EXHAUSTED')) {
+          errorMessage = 'Rate limit exceeded. Please wait a moment and try again, or check your API quota at https://ai.dev/usage';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
