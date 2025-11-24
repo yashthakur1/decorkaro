@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload, Sparkles, Key } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 const AIAnalysisSection: React.FC = () => {
   // State for file handling
@@ -43,8 +43,8 @@ const AIAnalysisSection: React.FC = () => {
     setError(null);
 
     try {
-      // Initialize Google Generative AI with the user-provided API key
-      const genAI = new GoogleGenerativeAI(apiKey);
+      // Initialize Google GenAI with the user-provided API key
+      const ai = new GoogleGenAI({ apiKey: apiKey });
 
       if (!selectedFile) {
         throw new Error('No image file selected');
@@ -66,9 +66,6 @@ const AIAnalysisSection: React.FC = () => {
         reader.readAsDataURL(selectedFile);
       });
 
-      // Use Gemini Pro Vision model for image analysis
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-
       const analysisPrompt = `You are an expert interior designer. Analyze this room image and provide detailed design recommendations to create a minimal yet premium interior.
 
 Please provide:
@@ -80,21 +77,26 @@ Please provide:
 
 Focus on maintaining the room's structure while elevating the design with carefully selected elements.`;
 
-      // Prepare image parts for Gemini
-      const imageParts = [
-        {
-          inlineData: {
-            data: imageData,
-            mimeType: selectedFile.type || 'image/jpeg'
+      // Use Gemini 3 Pro Image (Nano Banana Pro) for image analysis
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-pro-image-preview',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: analysisPrompt },
+              {
+                inlineData: {
+                  data: imageData,
+                  mimeType: selectedFile.type || 'image/jpeg'
+                }
+              }
+            ]
           }
-        }
-      ];
+        ]
+      });
 
-      // Generate content with the image and prompt
-      const result = await model.generateContent([analysisPrompt, ...imageParts]);
-      const response = await result.response;
-      const text = response.text();
-
+      const text = response.text || '';
       console.log('Gemini Analysis:', text);
 
       setResult({
