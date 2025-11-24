@@ -66,47 +66,64 @@ const AIAnalysisSection: React.FC = () => {
         reader.readAsDataURL(selectedFile);
       });
 
-      const analysisPrompt = `You are an expert interior designer. Analyze this room image and provide detailed design recommendations to create a minimal yet premium interior.
+      const imageGenerationPrompt = `Transform this room into a minimal yet premium interior design.
+Maintain the room's exact structure and layout, but upgrade:
+- Wall colors to sophisticated neutrals or warm tones
+- Flooring with modern materials (hardwood, marble, or premium tiles)
+- Furniture with sleek, contemporary pieces
+- Lighting with elegant fixtures and warm ambient lighting
+- Add premium decor elements like artwork, plants, or sculptural pieces
+- Create a cohesive, upscale aesthetic with attention to detail
 
-Please provide:
-1. Current room assessment (style, layout, strengths, weaknesses)
-2. Specific design improvements for walls, flooring, furniture, and lighting
-3. Color palette recommendations
-4. Furniture and decor suggestions
-5. Budget-friendly alternatives where applicable
+Style: Minimal, modern, premium, sophisticated`;
 
-Focus on maintaining the room's structure while elevating the design with carefully selected elements.`;
-
-      // Use Gemini 2.0 Flash for image analysis (better quota limits)
+      // Use Gemini 2.5 Flash Image for image generation (Nano Banana API)
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash-image',
         contents: [
+          { text: imageGenerationPrompt },
           {
-            role: 'user',
-            parts: [
-              { text: analysisPrompt },
-              {
-                inlineData: {
-                  data: imageData,
-                  mimeType: selectedFile.type || 'image/jpeg'
-                }
-              }
-            ]
+            inlineData: {
+              data: imageData,
+              mimeType: selectedFile.type || 'image/jpeg'
+            }
           }
-        ]
+        ],
+        config: {
+          responseModalities: ['TEXT', 'IMAGE']
+        }
       });
 
-      const text = response.text || '';
-      console.log('Gemini Analysis:', text);
+      let generatedImageBase64 = '';
+      let analysisText = '';
+
+      // Extract both text and image from response
+      for (const candidate of response.candidates || []) {
+        for (const part of candidate.content?.parts || []) {
+          if (part.text) {
+            analysisText += part.text;
+          } else if (part.inlineData) {
+            generatedImageBase64 = part.inlineData.data;
+          }
+        }
+      }
+
+      console.log('Gemini Generated Image:', generatedImageBase64 ? 'Success' : 'No image');
+      console.log('Gemini Analysis:', analysisText);
+
+      // Convert base64 to data URL for display
+      const generatedImageUrl = generatedImageBase64
+        ? `data:image/png;base64,${generatedImageBase64}`
+        : preview; // Fallback to original if no image generated
 
       setResult({
-        text: text,
-        image: preview // Show the original uploaded image for reference
+        text: analysisText || 'Room redesign generated successfully!',
+        image: generatedImageUrl
       });
       setShowApiKeyInput(false);
     } catch (error) {
-      console.error('Error analyzing image:', error);
-      let errorMessage = 'Failed to analyze image. Please try again.';
+      console.error('Error generating design:', error);
+      let errorMessage = 'Failed to generate design. Please try again.';
 
       if (error instanceof Error) {
         // Check for rate limit errors
@@ -139,10 +156,10 @@ Focus on maintaining the room's structure while elevating the design with carefu
             </div>
             <div className="flex-1 text-center md:text-left">
               <h2 className="font-title text-2xl md:text-3xl font-bold text-slate-900 mb-2">
-                AI-Powered Design for Your Room
+                AI-Powered Room Redesign
               </h2>
               <p className="text-slate-700 font-secondary mb-3">
-                Upload a photo and let our AI suggest personalized design improvements.
+                Upload a photo and let our AI generate a premium redesign of your room.
               </p>
               <div className="mt-6">
                 <div 
@@ -171,7 +188,7 @@ Focus on maintaining the room's structure while elevating the design with carefu
                   onChange={handleFileSelect}
                 />
                 
-                {/* Analyse Image Button */}
+                {/* Generate Redesign Button */}
                 {preview && !showApiKeyInput && !result.image && (
                   <div className="mt-6 text-center">
                     <button
@@ -179,7 +196,7 @@ Focus on maintaining the room's structure while elevating the design with carefu
                       className="px-8 py-3 bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
                     >
                       <Sparkles size={20} />
-                      Analyse Image
+                      Generate Redesign
                     </button>
                   </div>
                 )}
@@ -194,10 +211,10 @@ Focus on maintaining the room's structure while elevating the design with carefu
             <div className="bg-slate-50 rounded-xl p-8 shadow-sm">
               <div className="text-center mb-8">
                 <h3 className="font-title text-xl font-bold text-slate-900 mb-2">
-                  AI Design Analysis
+                  AI Room Redesign Generator
                 </h3>
                 <p className="text-slate-700">
-                  Enter your Google Gemini API key to generate AI design suggestions
+                  Enter your Google Gemini API key to generate a redesigned version of your room
                 </p>
               </div>
               
@@ -218,15 +235,17 @@ Focus on maintaining the room's structure while elevating the design with carefu
               {result.image ? (
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <h4 className="font-serif text-xl font-bold text-slate-900 mb-6">
-                    Gemini AI Design Recommendations
+                    Your Redesigned Room
                   </h4>
                   <img
                     src={result.image}
-                    alt="Your room"
-                    className="w-full h-64 object-cover rounded-lg mb-6"
+                    alt="Redesigned room"
+                    className="w-full h-auto object-cover rounded-lg mb-6"
                   />
-                  <div className="text-slate-700 whitespace-pre-line prose prose-slate max-w-none">{result.text}</div>
-                  
+                  {result.text && (
+                    <div className="text-slate-700 whitespace-pre-line prose prose-slate max-w-none">{result.text}</div>
+                  )}
+
                   <div className="mt-6 text-center">
                     <button
                       onClick={() => {
@@ -239,7 +258,7 @@ Focus on maintaining the room's structure while elevating the design with carefu
                       }}
                       className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-colors"
                     >
-                      Analyse Another Image
+                      Redesign Another Room
                     </button>
                   </div>
                 </div>
@@ -266,11 +285,11 @@ Focus on maintaining the room's structure while elevating the design with carefu
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Design Prompt:</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">AI Model:</label>
                     <div className="w-full py-3 px-3 border border-slate-200 rounded-lg bg-slate-100 text-slate-600">
-                      {prompt}
+                      Gemini 2.5 Flash Image (Nano Banana 🍌)
                     </div>
-                    <p className="text-xs text-slate-500 mt-2">This prompt is optimized for best results</p>
+                    <p className="text-xs text-slate-500 mt-2">Fast image generation with premium design quality</p>
                   </div>
                   
                   <div className="flex gap-3">
@@ -289,7 +308,7 @@ Focus on maintaining the room's structure while elevating the design with carefu
                           : 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
                       }`}
                     >
-                      {isLoading ? 'Processing...' : 'Generate Design'}
+                      {isLoading ? 'Generating Redesign...' : 'Generate Room Redesign'}
                     </button>
                   </div>
                 </div>
