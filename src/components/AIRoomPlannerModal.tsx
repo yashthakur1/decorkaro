@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Sparkles, Key, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Sparkles, Key, Image as ImageIcon, Send } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 interface AIRoomPlannerModalProps {
@@ -8,10 +8,26 @@ interface AIRoomPlannerModalProps {
   onClose: () => void;
 }
 
+// Type definitions for conversation history
+interface ContentPart {
+  text?: string;
+  inlineData?: {
+    data: string;
+    mimeType: string;
+  };
+  thoughtSignature?: string;
+}
+
+interface ConversationTurn {
+  role: 'user' | 'model';
+  parts: ContentPart[];
+}
+
 const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose }) => {
   // State for file handling
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [originalImageData, setOriginalImageData] = useState<string | null>(null);
 
   // State for API and loading
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +43,11 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
   // State for image type selection
   const [imageType, setImageType] = useState<'floor-plan' | 'room-photo'>('floor-plan');
 
+  // State for conversation history (for multi-turn editing with thought signatures)
+  const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
+  const [isAnalyzed, setIsAnalyzed] = useState<boolean>(false);
+  const [currentEditPrompt, setCurrentEditPrompt] = useState<string>('');
+
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -37,40 +58,37 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
         setPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      // Reset results when new file is selected
+
+      // Convert to base64 for API usage
+      const base64Reader = new FileReader();
+      base64Reader.onloadend = () => {
+        if (typeof base64Reader.result === 'string') {
+          const base64 = base64Reader.result.split(',')[1];
+          setOriginalImageData(base64);
+        }
+      };
+      base64Reader.readAsDataURL(file);
+
+      // Reset state when new file is selected
       setResult({ text: '', image: null });
       setError(null);
+      setConversationHistory([]);
+      setIsAnalyzed(false);
+      setCurrentEditPrompt('');
     }
   };
 
   const handleAnalyze = async () => {
-    if (!selectedFile || !apiKey) return;
+    if (!originalImageData || !apiKey) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Initialize Google GenAI with the user-provided API key
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-
-      if (!selectedFile) {
-        throw new Error('No image file selected');
-      }
-
-      // Convert image to base64
-      const imageData = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (typeof reader.result === 'string') {
-            // Extract base64 data from data URL
-            const base64 = reader.result.split(',')[1];
-            resolve(base64);
-          } else {
-            reject(new Error('Failed to read image file'));
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
+      // Initialize Google GenAI with v1alpha API for thought signatures and media_resolution
+      const ai = new GoogleGenAI({
+        apiKey: apiKey,
+        apiVersion: selectedModel.includes('gemini-3') ? "v1alpha" : undefined
       });
 
       // Create prompt based on selected image type
@@ -119,39 +137,41 @@ Create a photorealistic visualization that showcases the space's full potential 
 
       const imageGenerationPrompt = imageType === 'floor-plan' ? floorPlanPrompt : roomPhotoPrompt;
 
-      // Use selected Gemini model for image generation
-      let response;
+      // Build user content parts - CRITICAL: Proper structure for thought signatures
+      const userParts: ContentPart[] = [
+        { text: imageGenerationPrompt },
+        {
+          inlineData: {
+            data: originalImageData,
+            mimeType: selectedFile.type || 'image/jpeg'
+          }
+        }
+      ];
 
-      if (selectedModel === 'gemini-3-pro-image-preview') {
-        // Use new API structure for gemini-3-pro-image-preview
-        response = await ai.models.generateContent({
-          model: selectedModel,
-          contents: imageGenerationPrompt,
-          config: {
-            imageConfig: {
-              aspectRatio: "16:9",
-              imageSize: "4K"
-            }
-          }
-        });
-      } else {
-        // Use existing API structure for other models (Nano Banana API)
-        response = await ai.models.generateContent({
-          model: selectedModel,
-          contents: [
-            { text: imageGenerationPrompt },
-            {
-              inlineData: {
-                data: imageData,
-                mimeType: selectedFile.type || 'image/jpeg'
+      // Build API request with proper content structure
+      const apiContents: any[] = [{
+        role: 'user',
+        parts: selectedModel.includes('gemini-3')
+          ? userParts.map(part => {
+              if (part.inlineData) {
+                return {
+                  inlineData: part.inlineData,
+                  mediaResolution: { level: "media_resolution_high" }
+                };
               }
-            }
-          ],
-          config: {
-            responseModalities: ['TEXT', 'IMAGE']
-          }
-        });
-      }
+              return part;
+            })
+          : userParts
+      }];
+
+      // Use selected Gemini model for image generation
+      const response = await ai.models.generateContent({
+        model: selectedModel,
+        contents: apiContents,
+        config: selectedModel.includes('gemini-3')
+          ? {} // Gemini 3 doesn't use responseModalities
+          : { responseModalities: ['TEXT', 'IMAGE'] }
+      });
 
       let generatedImageBase64 = '';
       let analysisText = '';
@@ -160,7 +180,7 @@ Create a photorealistic visualization that showcases the space's full potential 
       console.log('Full Gemini API Response:', JSON.stringify(response, null, 2));
       console.log('Response candidates:', response.candidates);
 
-      // Extract both text and image from response
+      // Extract both text and image from response (for display only)
       for (const candidate of response.candidates || []) {
         console.log('Processing candidate:', candidate);
         for (const part of candidate.content?.parts || []) {
@@ -189,6 +209,22 @@ Create a photorealistic visualization that showcases the space's full potential 
         text: analysisText || 'Your premium space visualization has been generated successfully!',
         image: generatedImageUrl
       });
+
+      // CRITICAL: Store complete conversation history with thought signatures intact
+      // This is the KEY FIX - don't manually extract signatures, store the complete response
+      const userTurn: ConversationTurn = {
+        role: 'user',
+        parts: userParts
+      };
+
+      const modelTurn: ConversationTurn = {
+        role: 'model',
+        parts: response.candidates?.[0]?.content?.parts || []
+      };
+
+      setConversationHistory([userTurn, modelTurn]);
+      setIsAnalyzed(true);
+      console.log('Conversation history stored with', modelTurn.parts.length, 'model parts');
     } catch (error) {
       console.error('Error generating design:', error);
       console.error('Error details:', error instanceof Error ? error.stack : error);
@@ -223,12 +259,124 @@ Create a photorealistic visualization that showcases the space's full potential 
     }
   };
 
+  // Handle editing requests with thought signatures - THE KEY FIX
+  const handleEdit = async () => {
+    if (!currentEditPrompt.trim() || !apiKey || conversationHistory.length === 0) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Initialize Google GenAI with v1alpha API for thought signatures
+      const ai = new GoogleGenAI({
+        apiKey: apiKey,
+        apiVersion: selectedModel.includes('gemini-3') ? "v1alpha" : undefined
+      });
+
+      // CRITICAL FIX: Send complete conversation history + new user message
+      // The thought signatures are already in the model's parts from previous responses
+      // We DON'T manually extract and re-send them - the API handles this automatically
+      const contents: any[] = conversationHistory.map(turn => ({
+        role: turn.role,
+        parts: selectedModel.includes('gemini-3')
+          ? turn.parts.map((part: ContentPart) => {
+              // For Gemini 3, add mediaResolution to images
+              if (part.inlineData) {
+                return {
+                  ...part,
+                  mediaResolution: { level: "media_resolution_high" }
+                };
+              }
+              // All other parts (text, thoughtSignature) pass through unchanged
+              return part;
+            })
+          : turn.parts
+      }));
+
+      // Add new user message (no thought signature needed - it's automatically handled)
+      contents.push({
+        role: 'user',
+        parts: [{ text: currentEditPrompt }]
+      });
+
+      console.log('Editing with', contents.length, 'turns in conversation history');
+
+      const response = await ai.models.generateContent({
+        model: selectedModel,
+        contents: contents,
+        config: selectedModel.includes('gemini-3')
+          ? {} // Gemini 3 doesn't use responseModalities
+          : { responseModalities: ['TEXT', 'IMAGE'] }
+      });
+
+      console.log('Edit Response:', JSON.stringify(response, null, 2));
+
+      // Extract new content for display
+      let generatedImageBase64 = '';
+      let responseText = '';
+
+      for (const candidate of response.candidates || []) {
+        for (const part of candidate.content?.parts || []) {
+          if (part.text) {
+            responseText += part.text;
+          } else if (part.inlineData) {
+            generatedImageBase64 = part.inlineData.data;
+          }
+        }
+      }
+
+      if (generatedImageBase64) {
+        const imageUrl = `data:image/png;base64,${generatedImageBase64}`;
+        setResult({
+          text: responseText || 'Your edited visualization has been generated!',
+          image: imageUrl
+        });
+      }
+
+      // Update conversation history with new turns (including all thought signatures)
+      const userTurn: ConversationTurn = {
+        role: 'user',
+        parts: [{ text: currentEditPrompt }]
+      };
+
+      const modelTurn: ConversationTurn = {
+        role: 'model',
+        parts: response.candidates?.[0]?.content?.parts || []
+      };
+
+      setConversationHistory([...conversationHistory, userTurn, modelTurn]);
+      setCurrentEditPrompt('');
+      console.log('Edit complete. Conversation now has', conversationHistory.length + 2, 'turns');
+    } catch (error) {
+      console.error('Error editing image:', error);
+      let errorMessage = 'Failed to edit image. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('429') || error.message.includes('quota') || error.message.includes('RESOURCE_EXHAUSTED')) {
+          errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+        } else if (error.message.includes('thought_signature')) {
+          errorMessage = `❌ Thought Signature Error: ${error.message}\n\nThis usually means there's an issue with the conversation history. Try resetting and starting fresh.`;
+        } else {
+          errorMessage = `❌ Error: ${error.message}`;
+        }
+      }
+
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleReset = () => {
     setResult({ text: '', image: null });
     setError(null);
     setSelectedFile(null);
     setPreview(null);
+    setOriginalImageData(null);
     setApiKey('');
+    setConversationHistory([]);
+    setIsAnalyzed(false);
+    setCurrentEditPrompt('');
   };
 
   const handleClose = () => {
@@ -420,18 +568,48 @@ Create a photorealistic visualization that showcases the space's full potential 
 
                   {/* Action Buttons */}
                   <div className="space-y-3 pt-4">
-                    <button
-                      onClick={handleAnalyze}
-                      disabled={!selectedFile || !apiKey || isLoading}
-                      className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
-                        !selectedFile || !apiKey || isLoading
-                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                          : 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
-                      }`}
-                    >
-                      <Sparkles size={20} />
-                      {isLoading ? 'Generating...' : 'Generate Visualization'}
-                    </button>
+                    {!isAnalyzed ? (
+                      <button
+                        onClick={handleAnalyze}
+                        disabled={!selectedFile || !apiKey || isLoading}
+                        className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                          !selectedFile || !apiKey || isLoading
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            : 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
+                        }`}
+                      >
+                        <Sparkles size={20} />
+                        {isLoading ? 'Generating...' : 'Generate Visualization'}
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-lg p-4 border border-slate-200">
+                          <label className="text-sm font-medium text-slate-700 mb-2 block">
+                            Edit Prompt:
+                          </label>
+                          <textarea
+                            value={currentEditPrompt}
+                            onChange={(e) => setCurrentEditPrompt(e.target.value)}
+                            placeholder="E.g., 'Make the room brighter', 'Add more plants', 'Change to modern style'..."
+                            className="w-full py-2 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none text-sm"
+                            rows={3}
+                            disabled={isLoading}
+                          />
+                        </div>
+                        <button
+                          onClick={handleEdit}
+                          disabled={!currentEditPrompt.trim() || isLoading}
+                          className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                            !currentEditPrompt.trim() || isLoading
+                              ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                              : 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
+                          }`}
+                        >
+                          <Send size={20} />
+                          {isLoading ? 'Editing...' : 'Apply Edit'}
+                        </button>
+                      </div>
+                    )}
 
                     {(preview || result.image) && (
                       <button
