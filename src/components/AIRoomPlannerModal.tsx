@@ -98,22 +98,39 @@ Design Style Requirements (for both):
 
 Create a photorealistic visualization that showcases the space's full potential.`;
 
-      // Use selected Gemini model for image generation (Nano Banana API)
-      const response = await ai.models.generateContent({
-        model: selectedModel,
-        contents: [
-          { text: imageGenerationPrompt },
-          {
-            inlineData: {
-              data: imageData,
-              mimeType: selectedFile.type || 'image/jpeg'
+      // Use selected Gemini model for image generation
+      let response;
+
+      if (selectedModel === 'gemini-3-pro-image-preview') {
+        // Use new API structure for gemini-3-pro-image-preview
+        response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: imageGenerationPrompt,
+          config: {
+            imageConfig: {
+              aspectRatio: "16:9",
+              imageSize: "4K"
             }
           }
-        ],
-        config: {
-          responseModalities: ['TEXT', 'IMAGE']
-        }
-      });
+        });
+      } else {
+        // Use existing API structure for other models (Nano Banana API)
+        response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: [
+            { text: imageGenerationPrompt },
+            {
+              inlineData: {
+                data: imageData,
+                mimeType: selectedFile.type || 'image/jpeg'
+              }
+            }
+          ],
+          config: {
+            responseModalities: ['TEXT', 'IMAGE']
+          }
+        });
+      }
 
       let generatedImageBase64 = '';
       let analysisText = '';
@@ -322,11 +339,14 @@ Create a photorealistic visualization that showcases the space's full potential.
                         >
                           <option value="gemini-2.5-flash-image">Nano Banana Flash 🍌</option>
                           <option value="gemini-3-pro-image">Nano Banana Pro 🍌⚡</option>
+                          <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image Preview ✨</option>
                         </select>
                         <p className="text-xs text-slate-500 mt-2">
                           {selectedModel === 'gemini-2.5-flash-image'
                             ? 'Fast image generation with premium quality'
-                            : 'Enhanced quality with advanced AI capabilities'}
+                            : selectedModel === 'gemini-3-pro-image'
+                            ? 'Enhanced quality with advanced AI capabilities'
+                            : 'Latest preview model with advanced image generation'}
                         </p>
                       </div>
                     </div>
