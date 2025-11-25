@@ -17,6 +17,9 @@ const AIAnalysisSection: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>('');
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(false);
   const [prompt] = useState<string>('Rethink this exact room structure with a better interior, minimal yet premium');
+
+  // State for model selection
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-image');
   
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,22 +97,39 @@ Design Style Requirements (for both):
 
 Create a photorealistic visualization that showcases the space's full potential.`;
 
-      // Use Gemini 2.5 Flash Image for image generation (Nano Banana API)
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: [
-          { text: imageGenerationPrompt },
-          {
-            inlineData: {
-              data: imageData,
-              mimeType: selectedFile.type || 'image/jpeg'
+      // Use selected Gemini model for image generation
+      let response;
+
+      if (selectedModel === 'gemini-3-pro-image-preview') {
+        // Use new API structure for gemini-3-pro-image-preview
+        response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: imageGenerationPrompt,
+          config: {
+            imageConfig: {
+              aspectRatio: "16:9",
+              imageSize: "4K"
             }
           }
-        ],
-        config: {
-          responseModalities: ['TEXT', 'IMAGE']
-        }
-      });
+        });
+      } else {
+        // Use existing API structure for other models (Nano Banana API)
+        response = await ai.models.generateContent({
+          model: selectedModel,
+          contents: [
+            { text: imageGenerationPrompt },
+            {
+              inlineData: {
+                data: imageData,
+                mimeType: selectedFile.type || 'image/jpeg'
+              }
+            }
+          ],
+          config: {
+            responseModalities: ['TEXT', 'IMAGE']
+          }
+        });
+      }
 
       let generatedImageBase64 = '';
       let analysisText = '';
@@ -327,11 +347,24 @@ Create a photorealistic visualization that showcases the space's full potential.
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">AI Model:</label>
-                    <div className="w-full py-3 px-3 border border-slate-200 rounded-lg bg-slate-100 text-slate-600">
-                      Gemini 2.5 Flash Image (Nano Banana 🍌)
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">Fast image generation with premium design quality</p>
+                    <label htmlFor="ai-model-select" className="block text-sm font-medium text-slate-700 mb-2">AI Model:</label>
+                    <select
+                      id="ai-model-select"
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="w-full py-3 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-sm font-semibold text-slate-900"
+                    >
+                      <option value="gemini-2.5-flash-image">Nano Banana Flash 🍌</option>
+                      <option value="gemini-3-pro-image">Nano Banana Pro 🍌⚡</option>
+                      <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image Preview ✨</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      {selectedModel === 'gemini-2.5-flash-image'
+                        ? 'Fast image generation with premium quality'
+                        : selectedModel === 'gemini-3-pro-image'
+                        ? 'Enhanced quality with advanced AI capabilities'
+                        : 'Latest preview model with advanced image generation'}
+                    </p>
                   </div>
                   
                   <div className="flex gap-3">
