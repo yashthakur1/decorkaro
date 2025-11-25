@@ -153,27 +153,21 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
       for (const candidate of response.candidates || []) {
         const parts = candidate.content?.parts || [];
 
-        for (let i = 0; i < parts.length; i++) {
-          const part = parts[i];
-
-          // First part after thoughts gets signature
-          if (i === 0 || (parts[i-1] && 'thoughtSignature' in parts[i-1])) {
-            if (part.thoughtSignature) {
-              newThoughtSignatures.push({ thoughtSignature: part.thoughtSignature });
-            }
+        for (const part of parts) {
+          // Capture ALL thought signatures from the response
+          if (part.thoughtSignature) {
+            newThoughtSignatures.push({ thoughtSignature: part.thoughtSignature });
           }
 
+          // Process text content
           if (part.text) {
             analysisText += part.text;
-          } else if (part.inlineData) {
+          }
+          // Process inline image data
+          else if (part.inlineData) {
             hasImage = true;
             const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
             setCurrentImage(imageUrl);
-
-            // Every inlineData part gets signature
-            if (part.thoughtSignature) {
-              newThoughtSignatures.push({ thoughtSignature: part.thoughtSignature });
-            }
           }
         }
       }
@@ -308,25 +302,20 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
       for (const candidate of response.candidates || []) {
         const parts = candidate.content?.parts || [];
 
-        for (let i = 0; i < parts.length; i++) {
-          const part = parts[i];
-
-          // Capture thought signatures
-          if (i === 0 || (parts[i-1] && 'thoughtSignature' in parts[i-1])) {
-            if (part.thoughtSignature) {
-              newThoughtSignatures.push({ thoughtSignature: part.thoughtSignature });
-            }
+        for (const part of parts) {
+          // Capture ALL thought signatures from the response
+          if (part.thoughtSignature) {
+            newThoughtSignatures.push({ thoughtSignature: part.thoughtSignature });
           }
 
+          // Process text content
           if (part.text) {
             responseText += part.text;
-          } else if (part.inlineData) {
+          }
+          // Process inline image data
+          else if (part.inlineData) {
             const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
             setCurrentImage(imageUrl);
-
-            if (part.thoughtSignature) {
-              newThoughtSignatures.push({ thoughtSignature: part.thoughtSignature });
-            }
           }
         }
       }
