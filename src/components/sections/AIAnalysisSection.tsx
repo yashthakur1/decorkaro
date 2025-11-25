@@ -255,6 +255,7 @@ const AIAnalysisSection: React.FC = () => {
             }
             return { text: part.text };
           })
+          .filter(part => part.text !== undefined || part.thoughtSignature !== undefined) // Remove parts with undefined values
       }));
 
       // Add thought signatures before the new user request
