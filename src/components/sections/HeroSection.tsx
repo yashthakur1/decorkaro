@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import AIRoomPlannerModal from '../AIRoomPlannerModal';
 
 const HeroSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const slides = [
     {
@@ -72,12 +74,12 @@ const HeroSection: React.FC = () => {
             {slides[currentSlide].subtitle}
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <a
-              href="#ai-analysis"
+            <button
+              onClick={() => setIsModalOpen(true)}
               className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold px-8 py-3 rounded-md transition-colors duration-300"
             >
               Visualise your home with AI
-            </a>
+            </button>
             <a
               href="#contact"
               className="bg-transparent hover:bg-white/10 border-2 border-white text-white font-semibold px-8 py-3 rounded-md transition-colors duration-300"
@@ -109,6 +111,9 @@ const HeroSection: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* AI Room Planner Modal */}
+      <AIRoomPlannerModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </section>
   );
 };
