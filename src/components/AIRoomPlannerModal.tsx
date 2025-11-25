@@ -50,6 +50,17 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
   const [isAnalyzed, setIsAnalyzed] = useState<boolean>(false);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
 
+  // State for room/style buttons
+  const [detectedRooms, setDetectedRooms] = useState<string[]>([]);
+  const [availableStyles, setAvailableStyles] = useState<string[]>([
+    'Boho Style',
+    'Modern Style',
+    'Rustic Style',
+    'Minimalist Style',
+    'Industrial Style',
+    'Scandinavian Style'
+  ]);
+
   // Handle file selection
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -77,6 +88,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
       setIsAnalyzed(false);
       setCurrentImage(null);
       setError(null);
+      setDetectedRooms([]);
     }
   };
 
@@ -93,8 +105,8 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
       // Create analysis prompt based on image type
       const analysisPrompt = imageType === 'floor-plan'
-        ? `Analyze this floor plan image and provide detailed insights about the space layout, room dimensions, and design possibilities. Describe what you see and suggest how this space could be transformed.`
-        : `Analyze this room/house photo and provide detailed insights about the current state, architecture, and design possibilities. Describe what you see and how this space could be improved or furnished.`;
+        ? `Visualise this floor plan into a real photographed version of the isometric view of 3d layout. After creating the visualization, list all the rooms you can identify in the floor plan (e.g., Kitchen, Living Room, Bedroom, Bathroom, Balcony, Dining Area, etc.). Format the room list as: "Rooms: Kitchen, Living Room, Bedroom"`
+        : `Visualise this room into a premium and aesthetic interiors, photographed with DSLR. Create a stunning, high-quality interior design visualization.`;
 
       // Build the content array with image and text
       const contents: ConversationTurn[] = [
@@ -166,6 +178,15 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
         }
       }
 
+      // Extract room names for floor plans
+      if (imageType === 'floor-plan') {
+        const roomsMatch = analysisText.match(/Rooms:\s*(.+?)(?:\n|$)/i);
+        if (roomsMatch) {
+          const rooms = roomsMatch[1].split(',').map(room => room.trim()).filter(Boolean);
+          setDetectedRooms(rooms);
+        }
+      }
+
       // Store thought signatures for next turn
       setThoughtSignatures(newThoughtSignatures);
 
@@ -215,7 +236,32 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
   // Handle editing requests with thought signatures
   const handleEdit = async () => {
-    if (!currentEditPrompt.trim() || !apiKey || thoughtSignatures.length === 0) return;
+    await handleEditWithPrompt(currentEditPrompt);
+  };
+
+  const handleReset = () => {
+    setConversationHistory([]);
+    setThoughtSignatures([]);
+    setIsAnalyzed(false);
+    setCurrentImage(null);
+    setError(null);
+    setSelectedFile(null);
+    setPreview(null);
+    setOriginalImageData(null);
+    setCurrentEditPrompt('');
+    setDetectedRooms([]);
+  };
+
+  // Handle room/style button clicks
+  const handleQuickPrompt = async (prompt: string) => {
+    setCurrentEditPrompt(prompt);
+    // Trigger edit with the selected prompt
+    await handleEditWithPrompt(prompt);
+  };
+
+  // Helper function to handle edit with a specific prompt
+  const handleEditWithPrompt = async (prompt: string) => {
+    if (!prompt.trim() || !apiKey || thoughtSignatures.length === 0) return;
 
     setIsLoading(true);
     setError(null);
@@ -223,25 +269,22 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey, apiVersion: "v1alpha" });
 
-      // Build contents with conversation history + thought signatures + new prompt
+      // Build contents with conversation history (TEXT ONLY - no images to avoid thought_signature errors)
       const contents: any[] = conversationHistory.map(turn => ({
         role: turn.role,
-        parts: turn.parts.map(part => {
-          if (part.inlineData) {
-            return {
-              inlineData: part.inlineData,
-              mediaResolution: {
-                level: "media_resolution_high"
-              }
-            };
-          }
-          return part;
-        })
+        parts: turn.parts
+          .filter(part => part.text || part.thoughtSignature) // Only include text and thought signatures, not images
+          .map(part => {
+            if (part.thoughtSignature) {
+              return { thoughtSignature: part.thoughtSignature };
+            }
+            return { text: part.text };
+          })
       }));
 
       // Add thought signatures before the new user request
       const signaturesAndNewPrompt: any[] = thoughtSignatures.map(sig => ({ thoughtSignature: sig.thoughtSignature }));
-      signaturesAndNewPrompt.push({ text: currentEditPrompt });
+      signaturesAndNewPrompt.push({ text: prompt });
 
       contents.push({
         role: 'user',
@@ -293,7 +336,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
       // Add to conversation history
       const userTurn: ConversationTurn = {
         role: 'user',
-        parts: [{ text: currentEditPrompt }]
+        parts: [{ text: prompt }]
       };
 
       const modelTurn: ConversationTurn = {
@@ -321,18 +364,6 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleReset = () => {
-    setConversationHistory([]);
-    setThoughtSignatures([]);
-    setIsAnalyzed(false);
-    setCurrentImage(null);
-    setError(null);
-    setSelectedFile(null);
-    setPreview(null);
-    setOriginalImageData(null);
-    setCurrentEditPrompt('');
   };
 
   const handleClose = () => {
@@ -519,11 +550,53 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
                         <Sparkles size={20} />
                         Edit Image
                       </h3>
+
+                      {/* Quick Action Buttons - Room/Style Selection */}
+                      {imageType === 'floor-plan' && detectedRooms.length > 0 && (
+                        <div className="mb-4 bg-white rounded-lg p-4 border border-slate-200">
+                          <label className="text-sm font-medium text-slate-700 mb-3 block">
+                            View Specific Room:
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {detectedRooms.map((room, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleQuickPrompt(`Show me a detailed view of the ${room}, photographed with DSLR quality`)}
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-slate-900 text-sm font-medium rounded-lg transition-colors disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
+                              >
+                                View {room}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {imageType === 'room-photo' && (
+                        <div className="mb-4 bg-white rounded-lg p-4 border border-slate-200">
+                          <label className="text-sm font-medium text-slate-700 mb-3 block">
+                            Apply Interior Style:
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {availableStyles.map((style, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => handleQuickPrompt(`Transform this room into ${style.toLowerCase()}, maintaining the room layout and photographed with DSLR quality`)}
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
+                              >
+                                {style}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-3">
                         <textarea
                           value={currentEditPrompt}
                           onChange={(e) => setCurrentEditPrompt(e.target.value)}
-                          placeholder="Describe how you want to edit the image (e.g., 'Add modern furniture', 'Change to a minimalist style', 'Add plants and lighting')"
+                          placeholder="Or describe your own custom edit (e.g., 'Add modern furniture', 'Change lighting', 'Add plants')"
                           className="w-full py-2.5 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-sm resize-none"
                           rows={4}
                         />
