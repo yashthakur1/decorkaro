@@ -21,6 +21,9 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
   // State for API key
   const [apiKey, setApiKey] = useState<string>('');
 
+  // State for model selection
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-image');
+
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -95,9 +98,9 @@ Design Style Requirements (for both):
 
 Create a photorealistic visualization that showcases the space's full potential.`;
 
-      // Use Gemini 2.5 Flash Image for image generation (Nano Banana API)
+      // Use selected Gemini model for image generation (Nano Banana API)
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
+        model: selectedModel,
         contents: [
           { text: imageGenerationPrompt },
           {
@@ -308,9 +311,23 @@ Create a photorealistic visualization that showcases the space's full potential.
                         </a>
                       </p>
                       <div className="bg-white rounded-lg p-3 border border-slate-200">
-                        <p className="text-xs font-medium text-slate-700 mb-1">Model:</p>
-                        <p className="text-sm text-slate-900 font-semibold">Gemini 2.5 Flash Image</p>
-                        <p className="text-xs text-slate-500 mt-1">Fast image generation with premium quality</p>
+                        <label htmlFor="model-select" className="text-xs font-medium text-slate-700 mb-2 block">
+                          AI Model:
+                        </label>
+                        <select
+                          id="model-select"
+                          value={selectedModel}
+                          onChange={(e) => setSelectedModel(e.target.value)}
+                          className="w-full py-2 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-sm font-semibold text-slate-900"
+                        >
+                          <option value="gemini-2.5-flash-image">Nano Banana Flash 🍌</option>
+                          <option value="gemini-3-pro-image">Nano Banana Pro 🍌⚡</option>
+                        </select>
+                        <p className="text-xs text-slate-500 mt-2">
+                          {selectedModel === 'gemini-2.5-flash-image'
+                            ? 'Fast image generation with premium quality'
+                            : 'Enhanced quality with advanced AI capabilities'}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -367,18 +384,6 @@ Create a photorealistic visualization that showcases the space's full potential.
                     </div>
                   ) : (
                     <div className="flex-1 space-y-6">
-                      {/* Original Image */}
-                      {preview && (
-                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                          <h4 className="text-sm font-semibold text-slate-700 mb-3">Original Image</h4>
-                          <img
-                            src={preview}
-                            alt="Original room"
-                            className="w-full h-auto object-contain rounded-lg max-h-[40vh]"
-                          />
-                        </div>
-                      )}
-
                       {/* Loading State */}
                       {isLoading && (
                         <div className="bg-yellow-50 rounded-xl p-8 border border-yellow-200">
