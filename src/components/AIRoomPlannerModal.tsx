@@ -24,6 +24,9 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
   // State for model selection
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash-image');
 
+  // State for image type selection
+  const [imageType, setImageType] = useState<'floor-plan' | 'room-photo'>('floor-plan');
+
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -70,33 +73,51 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
         reader.readAsDataURL(selectedFile);
       });
 
-      const imageGenerationPrompt = `You are a premium interior designer. Analyze this image and create a stunning visualization:
+      // Create prompt based on selected image type
+      const floorPlanPrompt = `You are a premium interior designer. Analyze this floor plan (architectural 2D drawing) and create a stunning visualization:
 
-IF THIS IS A FLOOR PLAN (architectural 2D drawing):
+TASK:
 - Transform it into a realistic 3D rendered visualization of the furnished space
 - Show how the space would look with premium furniture and decor
 - Use a bird's eye or isometric view that shows the layout clearly
-- Add sophisticated furniture arrangements that fit the floor plan
+- Add sophisticated furniture arrangements that fit the floor plan perfectly
 - Include modern, minimal, and premium design elements
 
-IF THIS IS AN EMPTY ROOM/HOUSE PHOTO (3D photograph):
+DESIGN REQUIREMENTS:
+- Minimal yet luxurious aesthetic
+- Modern and sophisticated
+- High-end materials and finishes (marble, hardwood, premium tiles)
+- Cohesive color scheme with neutrals or warm tones
+- Attention to spatial balance and flow
+- Elegant lighting fixtures and ambient lighting
+- Tasteful decor elements (artwork, plants, sculptural pieces)
+- Premium quality throughout
+
+Create a photorealistic 3D visualization that showcases the floor plan's full potential with premium furnishings.`;
+
+      const roomPhotoPrompt = `You are a premium interior designer. Analyze this empty room/house photo and create a stunning visualization:
+
+TASK:
 - Furnish and decorate the space with premium interior design
 - Maintain the exact room structure, walls, windows, and architectural features
 - Add sophisticated furniture with sleek, contemporary pieces
+- Transform the empty space into a fully furnished premium interior
+
+DESIGN REQUIREMENTS:
+- Minimal yet luxurious aesthetic
+- Modern and sophisticated
 - Use elegant color palettes with neutrals or warm tones
 - Include premium flooring (hardwood, marble, or high-end tiles)
 - Add ambient lighting with elegant fixtures
 - Include tasteful decor elements (artwork, plants, sculptural pieces)
-
-Design Style Requirements (for both):
-- Minimal yet luxurious aesthetic
-- Modern and sophisticated
 - High-end materials and finishes
 - Cohesive color scheme
 - Attention to spatial balance and flow
 - Premium quality throughout
 
-Create a photorealistic visualization that showcases the space's full potential.`;
+Create a photorealistic visualization that showcases the space's full potential with premium furnishings and decor.`;
+
+      const imageGenerationPrompt = imageType === 'floor-plan' ? floorPlanPrompt : roomPhotoPrompt;
 
       // Use selected Gemini model for image generation
       let response;
@@ -270,6 +291,42 @@ Create a photorealistic visualization that showcases the space's full potential.
                       <Upload size={20} />
                       Upload Image
                     </h3>
+
+                    {/* Image Type Selection */}
+                    <div className="mb-4 bg-white rounded-lg p-4 border border-slate-200">
+                      <label className="text-sm font-medium text-slate-700 mb-3 block">
+                        Select Image Type:
+                      </label>
+                      <div className="space-y-2">
+                        <label className="flex items-center cursor-pointer group">
+                          <input
+                            type="radio"
+                            name="image-type"
+                            value="floor-plan"
+                            checked={imageType === 'floor-plan'}
+                            onChange={(e) => setImageType(e.target.value as 'floor-plan')}
+                            className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
+                          />
+                          <span className="ml-3 text-sm text-slate-700 group-hover:text-slate-900">
+                            Floor Plan (2D architectural drawing)
+                          </span>
+                        </label>
+                        <label className="flex items-center cursor-pointer group">
+                          <input
+                            type="radio"
+                            name="image-type"
+                            value="room-photo"
+                            checked={imageType === 'room-photo'}
+                            onChange={(e) => setImageType(e.target.value as 'room-photo')}
+                            className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
+                          />
+                          <span className="ml-3 text-sm text-slate-700 group-hover:text-slate-900">
+                            Room Photo (empty room/house)
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+
                     <div
                       className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-yellow-500 transition-colors cursor-pointer bg-white"
                       onClick={() => document.getElementById('modal-room-photo')?.click()}
@@ -286,7 +343,9 @@ Create a photorealistic visualization that showcases the space's full potential.
                       ) : (
                         <div className="flex flex-col items-center">
                           <Upload className="text-slate-400 mb-2" size={32} />
-                          <p className="text-slate-700 text-sm font-medium">Upload floor plan or room photo</p>
+                          <p className="text-slate-700 text-sm font-medium">
+                            {imageType === 'floor-plan' ? 'Upload floor plan image' : 'Upload room photo'}
+                          </p>
                           <p className="text-slate-500 text-xs mt-1">JPG, PNG up to 5MB</p>
                         </div>
                       )}
