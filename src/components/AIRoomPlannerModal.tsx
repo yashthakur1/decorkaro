@@ -269,10 +269,15 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
         parts: turn.parts
           .filter(part => part.text || part.thoughtSignature) // Only include text and thought signatures, not images
           .map(part => {
-            if (part.thoughtSignature) {
-              return { thoughtSignature: part.thoughtSignature };
+            // Preserve both text and thoughtSignature in the same part if they exist together
+            const newPart: any = {};
+            if (part.text !== undefined) {
+              newPart.text = part.text;
             }
-            return { text: part.text };
+            if (part.thoughtSignature !== undefined) {
+              newPart.thoughtSignature = part.thoughtSignature;
+            }
+            return newPart;
           })
           .filter(part => part.text !== undefined || part.thoughtSignature !== undefined) // Remove parts with undefined values
       }));
