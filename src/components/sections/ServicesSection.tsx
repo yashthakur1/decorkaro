@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ServiceCard from '../ui/ServiceCard';
 import { Home, Building2, Building as BuildingStore, Hotel, Palette } from 'lucide-react';
+import GoogleFormModal from '../GoogleFormModal';
 
 const ServicesSection: React.FC = () => {
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: (custom: number) => ({
@@ -131,12 +133,12 @@ const ServicesSection: React.FC = () => {
               custom={index + 1}
               variants={fadeIn}
             >
-              <ServiceCard service={service} />
+              <ServiceCard service={service} onBookNow={() => setIsFormModalOpen(true)} />
             </motion.div>
           ))}
         </div>
 
-        <motion.div 
+        <motion.div
           className="text-center mt-14"
           initial="hidden"
           whileInView="visible"
@@ -147,14 +149,17 @@ const ServicesSection: React.FC = () => {
           <p className="text-slate-700 mb-6">
             Not sure which service is right for you? Get in touch for a free consultation.
           </p>
-          <a 
-            href="#contact" 
+          <button
+            onClick={() => setIsFormModalOpen(true)}
             className="inline-block bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold px-8 py-3 rounded-md transition-colors duration-300"
           >
-            Schedule a Consultation
-          </a>
+            Get Free Estimate
+          </button>
         </motion.div>
       </div>
+
+      {/* Google Form Modal */}
+      <GoogleFormModal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} />
     </section>
   );
 };

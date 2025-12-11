@@ -7,9 +7,11 @@ const Footer: React.FC = () => {
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-title text-2xl font-bold mb-4">
-              DecorKaro<span className="text-yellow-500">.</span>
-            </h3>
+            <img
+              src="/images/dk-logo.png"
+              alt="DecorKaro"
+              className="h-12 w-auto mb-4 brightness-0 invert"
+            />
             <p className="text-slate-400 mb-6 font-secondary">
               Transform your home with affordable modular interior packages. Choose from Essentials, Premium & Luxe packages. Serving Thane and across India.
             </p>

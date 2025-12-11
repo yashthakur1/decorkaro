@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import GoogleFormModal from './GoogleFormModal';
 
 const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,10 +36,13 @@ const Navbar: React.FC = () => {
       <div className="container mx-auto px-4 md:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center">
-            <span className="font-title text-2xl font-bold tracking-tight">
-              DecorKaro
-              <span className="text-yellow-500">.</span>
-            </span>
+            <img
+              src="/images/dk-logo.png"
+              alt="DecorKaro"
+              className={`h-10 md:h-12 w-auto transition-all duration-300 ${
+                scrolled ? '' : 'brightness-0 invert'
+              }`}
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -46,16 +51,16 @@ const Navbar: React.FC = () => {
             <a href="#services" className="hover:text-yellow-500 transition-colors font-title">Services</a>
             <a href="#packages" className="hover:text-yellow-500 transition-colors font-title">Packages</a>
             <a href="#testimonials" className="hover:text-yellow-500 transition-colors font-title">Testimonials</a>
-            <a 
-              href="#contact" 
+            <button
+              onClick={() => setIsFormModalOpen(true)}
               className={`px-4 py-2 rounded-md font-title ${
-                scrolled 
-                  ? 'bg-slate-900 text-white' 
+                scrolled
+                  ? 'bg-slate-900 text-white'
                   : 'bg-yellow-500 text-slate-900'
               } hover:bg-yellow-600 transition-colors`}
             >
-              Book Now
-            </a>
+              Get Free Estimate
+            </button>
           </div>
 
           {/* Mobile Navigation Toggle */}
@@ -122,16 +127,21 @@ const Navbar: React.FC = () => {
             >
               Testimonials
             </a>
-            <a 
-              href="#contact" 
-              className="py-2 px-4 bg-yellow-500 text-slate-900 hover:bg-yellow-600 rounded-md text-center"
-              onClick={() => setIsOpen(false)}
+            <button
+              className="py-2 px-4 bg-yellow-500 text-slate-900 hover:bg-yellow-600 rounded-md text-center w-full"
+              onClick={() => {
+                setIsOpen(false);
+                setIsFormModalOpen(true);
+              }}
             >
-              Book Now
-            </a>
+              Get Free Estimate
+            </button>
           </div>
         </motion.div>
       )}
+
+      {/* Google Form Modal */}
+      <GoogleFormModal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} />
     </nav>
   );
 };
