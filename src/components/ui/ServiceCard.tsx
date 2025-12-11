@@ -11,9 +11,10 @@ interface ServiceProps {
     price: string;
     features: string[];
   };
+  onBookNow?: () => void;
 }
 
-const ServiceCard: React.FC<ServiceProps> = ({ service }) => {
+const ServiceCard: React.FC<ServiceProps> = ({ service, onBookNow }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -39,13 +40,13 @@ const ServiceCard: React.FC<ServiceProps> = ({ service }) => {
         </div>
         
         <div>
-          <a 
-            href="#contact" 
+          <button
+            onClick={onBookNow}
             className="group inline-flex items-center font-medium text-yellow-500 hover:text-yellow-600 transition-colors font-secondary"
           >
-            Book Now
+            Get Estimate
             <ChevronRight size={16} className={`ml-1 transition-transform duration-300 ${isHovered ? 'translate-x-1' : ''}`} />
-          </a>
+          </button>
         </div>
       </div>
     </motion.div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, Sparkles, Key, Image as ImageIcon, Send } from 'lucide-react';
+import { X, Upload, Sparkles, Image as ImageIcon, Send } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 interface AIRoomPlannerModalProps {
@@ -32,8 +32,8 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // State for API key
-  const [apiKey, setApiKey] = useState<string>('');
+  // API key from environment variable
+  const apiKey = import.meta.env.VITE_GOOGLE_NANO_BANANA_KEY || '';
 
   // State for model selection
   const [selectedModel, setSelectedModel] = useState<string>('gemini-3-pro-image-preview');
@@ -94,7 +94,12 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
   // Initial analysis of uploaded image
   const handleAnalyze = async () => {
-    if (!originalImageData || !apiKey) return;
+    if (!originalImageData) return;
+
+    if (!apiKey) {
+      setError('AI service is temporarily unavailable. Please try again later or contact support.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -255,7 +260,12 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
   // Helper function to handle edit with a specific prompt
   const handleEditWithPrompt = async (prompt: string) => {
-    if (!prompt.trim() || !apiKey || thoughtSignatures.length === 0) return;
+    if (!prompt.trim() || thoughtSignatures.length === 0) return;
+
+    if (!apiKey) {
+      setError('AI service is temporarily unavailable. Please try again later or contact support.');
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -491,52 +501,6 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
                     </div>
                   )}
 
-                  {/* API Key Section */}
-                  <div>
-                    <h3 className="font-title text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                      <Key size={20} />
-                      API Configuration
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="relative">
-                        <input
-                          type="password"
-                          value={apiKey}
-                          onChange={(e) => setApiKey(e.target.value)}
-                          placeholder="Enter Google Gemini API key"
-                          className="w-full py-2.5 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-sm"
-                        />
-                      </div>
-                      <p className="text-xs text-slate-600">
-                        Get your API key from{' '}
-                        <a
-                          href="https://aistudio.google.com/app/apikey"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-yellow-600 underline hover:text-yellow-700"
-                        >
-                          Google AI Studio
-                        </a>
-                      </p>
-                      <div className="bg-white rounded-lg p-3 border border-slate-200">
-                        <label htmlFor="model-select" className="text-xs font-medium text-slate-700 mb-2 block">
-                          AI Model:
-                        </label>
-                        <select
-                          id="model-select"
-                          value={selectedModel}
-                          onChange={(e) => setSelectedModel(e.target.value)}
-                          className="w-full py-2 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-sm font-semibold text-slate-900"
-                          disabled={isAnalyzed}
-                        >
-                          <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image Preview ✨</option>
-                        </select>
-                        <p className="text-xs text-slate-500 mt-2">
-                          Supports conversational image editing with thought signatures
-                        </p>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Editing Section - shown after analysis */}
                   {isAnalyzed && (
@@ -623,15 +587,15 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
                     {!isAnalyzed ? (
                       <button
                         onClick={handleAnalyze}
-                        disabled={!selectedFile || !apiKey || isLoading}
+                        disabled={!selectedFile || isLoading}
                         className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
-                          !selectedFile || !apiKey || isLoading
+                          !selectedFile || isLoading
                             ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                             : 'bg-yellow-500 hover:bg-yellow-600 text-slate-900'
                         }`}
                       >
                         <Sparkles size={20} />
-                        {isLoading ? 'Analyzing...' : 'Analyze Image'}
+                        {isLoading ? 'Analyzing...' : 'Generate Visualization'}
                       </button>
                     ) : (
                       <button

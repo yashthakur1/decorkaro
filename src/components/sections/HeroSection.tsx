@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import AIRoomPlannerModal from '../AIRoomPlannerModal';
+import GoogleFormModal from '../GoogleFormModal';
 
 const HeroSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+
+  const revolvingTexts = ['Home', 'Office', 'Brand', 'Salon', 'Shop', 'Store'];
+
   const slides = [
     {
       image: 'https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg',
-      title: 'Transform Your Space',
       subtitle: 'Creating stunning interiors across India, starting from Thane'
     },
     {
       image: 'https://images.pexels.com/photos/276528/pexels-photo-276528.jpeg',
-      title: 'Luxury Design Solutions',
       subtitle: 'Bespoke interior designs for every lifestyle'
     },
     {
       image: 'https://images.pexels.com/photos/1571458/pexels-photo-1571458.jpeg',
-      title: 'Elevate Your Living',
       subtitle: 'Where functionality meets aesthetics'
     }
   ];
@@ -31,6 +31,13 @@ const HeroSection: React.FC = () => {
     }, 5000);
     return () => clearInterval(interval);
   }, [slides.length]);
+
+  useEffect(() => {
+    const textInterval = setInterval(() => {
+      setCurrentTextIndex((prev) => (prev + 1) % revolvingTexts.length);
+    }, 2000);
+    return () => clearInterval(textInterval);
+  }, [revolvingTexts.length]);
 
   const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId);
@@ -68,17 +75,32 @@ const HeroSection: React.FC = () => {
           className="max-w-4xl mx-auto"
         >
           <h1 className="font-title text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            {slides[currentSlide].title}
+            Design your{' '}
+            <span className="relative inline-block min-w-[180px] md:min-w-[220px] text-yellow-400">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={currentTextIndex}
+                  initial={{ y: 40, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -40, opacity: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeInOut' }}
+                  className="absolute left-0"
+                >
+                  {revolvingTexts[currentTextIndex]}
+                </motion.span>
+              </AnimatePresence>
+              <span className="invisible">{revolvingTexts[0]}</span>
+            </span>
           </h1>
           <p className="font-secondary text-xl md:text-2xl mb-10 text-gray-200 max-w-2xl mx-auto">
             {slides[currentSlide].subtitle}
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setIsFormModalOpen(true)}
               className="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold px-8 py-3 rounded-md transition-colors duration-300"
             >
-              Visualise your home with AI
+              Get Free Estimate
             </button>
             <a
               href="#contact"
@@ -112,8 +134,8 @@ const HeroSection: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Room Planner Modal */}
-      <AIRoomPlannerModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Google Form Modal */}
+      <GoogleFormModal isOpen={isFormModalOpen} onClose={() => setIsFormModalOpen(false)} />
     </section>
   );
 };
