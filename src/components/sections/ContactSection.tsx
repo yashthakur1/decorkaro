@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { Phone, Mail, MapPin, MessageSquare } from "lucide-react";
+import { Phone, Mail, MapPin, MessageSquare, Clock } from "lucide-react";
 
 interface FormInputs {
 	name: string;
@@ -29,6 +29,7 @@ const ContactSection: React.FC = () => {
 	return (
 		<section id="contact" className="py-20 bg-slate-900 text-white">
 			<div className="container mx-auto px-4 md:px-6 lg:px-8">
+				{/* Section Header */}
 				<motion.div
 					className="text-center max-w-3xl mx-auto mb-16"
 					initial={{ opacity: 0, y: 20 }}
@@ -46,10 +47,79 @@ const ContactSection: React.FC = () => {
 					</p>
 				</motion.div>
 
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-					{/* Contact Form */}
+				{/* Get in Touch - 2x2 Grid */}
+				<motion.div
+					className="mb-16"
+					initial={{ opacity: 0, y: 20 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, amount: 0.3 }}
+					transition={{ duration: 0.6 }}
+				>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+						{/* Our Location */}
+						<div className="bg-slate-800 rounded-xl p-6">
+							<div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center mb-4">
+								<MapPin size={24} className="text-slate-900" />
+							</div>
+							<h4 className="font-title font-semibold text-lg mb-2">Our Location</h4>
+							<p className="text-slate-400 font-secondary text-sm">
+								Decorkaro, Sai Baba Mandir,
+								<br />
+								Behind Pipeline road, Kalher,
+								<br />
+								Thane, India, 421302
+							</p>
+						</div>
+
+						{/* Call Us */}
+						<div className="bg-slate-800 rounded-xl p-6">
+							<div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center mb-4">
+								<Phone size={24} className="text-slate-900" />
+							</div>
+							<h4 className="font-title font-semibold text-lg mb-2">Call Us</h4>
+							<a
+								href="tel:+919930845311"
+								className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary text-sm"
+							>
+								+91 99308 45311
+							</a>
+						</div>
+
+						{/* Email Us */}
+						<div className="bg-slate-800 rounded-xl p-6">
+							<div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center mb-4">
+								<Mail size={24} className="text-slate-900" />
+							</div>
+							<h4 className="font-title font-semibold text-lg mb-2">Email Us</h4>
+							<a
+								href="mailto:decorkaro.india@gmail.com"
+								className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary text-sm break-all"
+							>
+								decorkaro.india@gmail.com
+							</a>
+						</div>
+
+						{/* WhatsApp */}
+						<div className="bg-slate-800 rounded-xl p-6">
+							<div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center mb-4">
+								<MessageSquare size={24} className="text-slate-900" />
+							</div>
+							<h4 className="font-title font-semibold text-lg mb-2">WhatsApp</h4>
+							<a
+								href="https://wa.me/919930845311"
+								className="text-slate-400 hover:text-yellow-500 transition-colors font-secondary text-sm"
+							>
+								+91 99308 45311
+							</a>
+						</div>
+					</div>
+				</motion.div>
+
+				{/* Form and Business Hours */}
+				<div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+					{/* Contact Form - Takes 2 columns */}
 					<motion.div
-						className="bg-white text-slate-900 rounded-xl p-8 shadow-lg"
+						className="lg:col-span-2 bg-white text-slate-900 rounded-xl p-6 md:p-8 shadow-lg"
 						initial={{ opacity: 0, x: -50 }}
 						whileInView={{ opacity: 1, x: 0 }}
 						viewport={{ once: true, amount: 0.3 }}
@@ -57,8 +127,8 @@ const ContactSection: React.FC = () => {
 					>
 						<h3 className="font-title text-2xl font-bold mb-6">Book a Consultation</h3>
 
-						<form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 								<div>
 									<label
 										htmlFor="name"
@@ -69,7 +139,7 @@ const ContactSection: React.FC = () => {
 									<input
 										type="text"
 										id="name"
-										className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
 											errors.name ? "border-red-500" : "border-slate-300"
 										}`}
 										placeholder="John Doe"
@@ -90,7 +160,7 @@ const ContactSection: React.FC = () => {
 									<input
 										type="email"
 										id="email"
-										className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
 											errors.email ? "border-red-500" : "border-slate-300"
 										}`}
 										placeholder="john@example.com"
@@ -117,11 +187,13 @@ const ContactSection: React.FC = () => {
 									<input
 										type="tel"
 										id="phone"
-										className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
 											errors.phone ? "border-red-500" : "border-slate-300"
 										}`}
 										placeholder="+91 99308 45311"
-										{...register("phone", { required: "Phone number is required" })}
+										{...register("phone", {
+											required: "Phone number is required",
+										})}
 									/>
 									{errors.phone && (
 										<p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>
@@ -137,17 +209,20 @@ const ContactSection: React.FC = () => {
 									</label>
 									<select
 										id="serviceType"
-										className={`w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
+										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
 											errors.serviceType ? "border-red-500" : "border-slate-300"
 										}`}
-										{...register("serviceType", { required: "Please select a service" })}
+										{...register("serviceType", {
+											required: "Please select a service",
+										})}
 									>
 										<option value="">Select a service</option>
-										<option value="residential">Residential Design</option>
+										<option value="1bhk">1BHK Package</option>
+										<option value="2bhk">2BHK Package</option>
+										<option value="3bhk">3BHK Package</option>
+										<option value="4bhk">4BHK Package</option>
+										<option value="kitchen">Modular Kitchen</option>
 										<option value="commercial">Commercial Design</option>
-										<option value="retail">Retail Design</option>
-										<option value="hospitality">Hospitality Design</option>
-										<option value="renovation">Renovation</option>
 									</select>
 									{errors.serviceType && (
 										<p className="mt-1 text-sm text-red-500">
@@ -156,7 +231,7 @@ const ContactSection: React.FC = () => {
 									)}
 								</div>
 
-								<div>
+								<div className="md:col-span-2">
 									<label
 										htmlFor="budget"
 										className="block text-sm font-medium text-slate-700 mb-1"
@@ -165,7 +240,7 @@ const ContactSection: React.FC = () => {
 									</label>
 									<select
 										id="budget"
-										className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+										className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
 										{...register("budget")}
 									>
 										<option value="">Select budget range</option>
@@ -186,9 +261,9 @@ const ContactSection: React.FC = () => {
 									</label>
 									<textarea
 										id="message"
-										rows={4}
-										className="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-										placeholder="Tell us about your project and requirements..."
+										rows={3}
+										className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+										placeholder="Tell us about your project..."
 										{...register("message")}
 									></textarea>
 								</div>
@@ -196,142 +271,79 @@ const ContactSection: React.FC = () => {
 
 							<button
 								type="submit"
-								className="w-full py-3 px-6 bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold rounded-md transition-colors duration-300"
+								className="w-full py-3 px-6 bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold rounded-lg transition-colors duration-300"
 							>
 								Submit Inquiry
 							</button>
 						</form>
 					</motion.div>
 
-					{/* Contact Information */}
+					{/* Business Hours & CTA */}
 					<motion.div
-						className="space-y-8"
+						className="space-y-6"
 						initial={{ opacity: 0, x: 50 }}
 						whileInView={{ opacity: 1, x: 0 }}
 						viewport={{ once: true, amount: 0.3 }}
 						transition={{ duration: 0.6 }}
 					>
-						<div>
-							<h3 className="font-serif text-2xl font-bold mb-6">Get in Touch</h3>
-							<div className="space-y-6">
-								<div className="flex items-start">
-									<MapPin size={24} className="text-yellow-500 mr-4 flex-shrink-0 mt-1" />
-									<div>
-										<h4 className="font-medium text-lg mb-1">Our Location</h4>
-										<p className="text-slate-400 font-secondary">
-											Decorkaro, Sai Baba Mandir,
-											<br />
-											Behind Pipeline road, Kalher,
-											<br />
-											Thane, India, 421302
-										</p>
-									</div>
+						{/* Business Hours */}
+						<div className="bg-slate-800 rounded-xl p-6">
+							<div className="flex items-center gap-3 mb-4">
+								<div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
+									<Clock size={20} className="text-slate-900" />
 								</div>
-
-								<div className="flex items-start">
-									<Phone size={24} className="text-yellow-500 mr-4 flex-shrink-0 mt-1" />
-									<div>
-										<h4 className="font-title font-medium text-lg mb-1">Call Us</h4>
-										<p className="text-slate-400 font-secondary">
-											<a
-												href="tel:+919930845311"
-												className="hover:text-yellow-500 transition-colors"
-											>
-												+91 99308 45311
-											</a>
-										</p>
-									</div>
-								</div>
-
-								<div className="flex items-start">
-									<Mail size={24} className="text-yellow-500 mr-4 flex-shrink-0 mt-1" />
-									<div>
-										<h4 className="font-title font-medium text-lg mb-1">Email Us</h4>
-										<p className="text-slate-400 font-secondary">
-											<a
-												href="mailto:decorkaro.india@gmail.com"
-												className="hover:text-yellow-500 transition-colors"
-											>
-												decorkaro.india@gmail.com
-											</a>
-										</p>
-									</div>
-								</div>
-
-								<div className="flex items-start">
-									<MessageSquare
-										size={24}
-										className="text-yellow-500 mr-4 flex-shrink-0 mt-1"
-									/>
-									<div>
-										<h4 className="font-title font-medium text-lg mb-1">WhatsApp</h4>
-										<p className="text-slate-400 font-secondary">
-											<a
-												href="https://wa.me/919930845311"
-												className="hover:text-yellow-500 transition-colors"
-											>
-												+91 99308 45311
-											</a>
-										</p>
-									</div>
-								</div>
+								<h3 className="font-title text-xl font-bold">Business Hours</h3>
 							</div>
-						</div>
-
-						<div>
-							<h3 className="font-title text-2xl font-bold mb-6">Business Hours</h3>
 							<ul className="space-y-3">
-								<li className="flex justify-between">
-									<span className="text-slate-400 font-secondary">Monday - Friday</span>
-									<span>10:00 AM - 7:00 PM</span>
+								<li className="flex justify-between text-sm">
+									<span className="text-slate-400 font-secondary">Mon - Fri</span>
+									<span className="font-medium">10:00 AM - 7:00 PM</span>
 								</li>
-								<li className="flex justify-between">
+								<li className="flex justify-between text-sm">
 									<span className="text-slate-400 font-secondary">Saturday</span>
-									<span>10:00 AM - 5:00 PM</span>
+									<span className="font-medium">10:00 AM - 5:00 PM</span>
 								</li>
-								<li className="flex justify-between">
+								<li className="flex justify-between text-sm">
 									<span className="text-slate-400 font-secondary">Sunday</span>
-									<span>By Appointment Only</span>
+									<span className="font-medium">By Appointment</span>
 								</li>
 							</ul>
 						</div>
 
-						<div className="bg-slate-800 p-8 rounded-xl">
-							<h3 className="font-title text-xl font-bold mb-4">
+						{/* Free Consultation CTA */}
+						<div className="bg-yellow-500 rounded-xl p-6 text-slate-900">
+							<h3 className="font-title text-xl font-bold mb-3">
 								Free Design Consultation
 							</h3>
-							<p className="text-slate-400 mb-4 font-secondary">
-								Book a no-obligation consultation with our expert designers to discuss
-								your project.
+							<p className="text-slate-700 mb-4 font-secondary text-sm">
+								Book a no-obligation consultation with our expert designers.
 							</p>
-							<ul className="space-y-3 mb-6">
-								<li className="flex items-start">
-									<div className="bg-yellow-500 text-slate-900 rounded-full w-5 h-5 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-										<span className="text-xs font-bold">✓</span>
-									</div>
-									<span className="font-secondary">
-										Personalized design recommendations
+							<ul className="space-y-2 mb-5">
+								<li className="flex items-center gap-2 text-sm">
+									<span className="w-5 h-5 bg-slate-900 text-yellow-500 rounded-full flex items-center justify-center text-xs font-bold">
+										✓
 									</span>
+									<span className="font-secondary">Personalized recommendations</span>
 								</li>
-								<li className="flex items-start">
-									<div className="bg-yellow-500 text-slate-900 rounded-full w-5 h-5 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-										<span className="text-xs font-bold">✓</span>
-									</div>
+								<li className="flex items-center gap-2 text-sm">
+									<span className="w-5 h-5 bg-slate-900 text-yellow-500 rounded-full flex items-center justify-center text-xs font-bold">
+										✓
+									</span>
 									<span className="font-secondary">Budget planning assistance</span>
 								</li>
-								<li className="flex items-start">
-									<div className="bg-yellow-500 text-slate-900 rounded-full w-5 h-5 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
-										<span className="text-xs font-bold">✓</span>
-									</div>
-									<span className="font-secondary">Material and finish suggestions</span>
+								<li className="flex items-center gap-2 text-sm">
+									<span className="w-5 h-5 bg-slate-900 text-yellow-500 rounded-full flex items-center justify-center text-xs font-bold">
+										✓
+									</span>
+									<span className="font-secondary">Material suggestions</span>
 								</li>
 							</ul>
 							<a
 								href="tel:+919930845311"
-								className="inline-flex items-center font-title font-medium text-yellow-500 hover:text-yellow-400 transition-colors"
+								className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-slate-800 transition-colors text-sm"
 							>
-								<Phone size={18} className="mr-2" />
-								Call Now: +91 99308 45311
+								<Phone size={18} />
+								Call Now
 							</a>
 						</div>
 					</motion.div>
