@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Sparkles, Image as ImageIcon, Send } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
@@ -64,6 +64,103 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 	// State for mobile tab view
 	const [activeTab, setActiveTab] = useState<"controls" | "preview">("controls");
 
+	// State for progress bar
+	const [progress, setProgress] = useState(0);
+	const [elapsedTime, setElapsedTime] = useState(0);
+	const [loadingMessage, setLoadingMessage] = useState("");
+	const progressIntervalRef = useRef<number | null>(null);
+	const ESTIMATED_TIME = 40; // 40 seconds estimated time
+
+	// Witty loading messages for floor plan
+	const floorPlanMessages = [
+		"Analysing your floor plan... 🔍",
+		"Measuring every corner with AI precision... 📐",
+		"Building walls & placing furniture... 🏠",
+		"Adding designer magic to your space... ✨",
+		"Final touches from our virtual designer... 🎨",
+	];
+
+	// Witty loading messages for room photo
+	const roomPhotoMessages = [
+		"Scanning your room dimensions... 📷",
+		"Consulting our AI interior designer... 🤖",
+		"Picking the perfect furniture & decor... 🛋️",
+		"Adjusting lighting for that perfect vibe... 💡",
+		"Polishing every pixel to perfection... ✨",
+	];
+
+	// Witty loading messages for edits
+	const editMessages = [
+		"Processing your creative vision... 🎯",
+		"Reshuffling the furniture... 🔄",
+		"Our AI designer is on it... 👨‍🎨",
+		"Adding those finishing touches... ✨",
+	];
+
+	// Get current loading messages based on context
+	const getLoadingMessages = () => {
+		if (isAnalyzed) return editMessages;
+		return imageType === "floor-plan" ? floorPlanMessages : roomPhotoMessages;
+	};
+
+	// Progress bar effect
+	useEffect(() => {
+		if (isLoading) {
+			setProgress(0);
+			setElapsedTime(0);
+			const messages = getLoadingMessages();
+			setLoadingMessage(messages[0]);
+
+			let messageIndex = 0;
+			const messageInterval = ESTIMATED_TIME / messages.length;
+
+			progressIntervalRef.current = window.setInterval(() => {
+				setElapsedTime((prev) => {
+					const newTime = prev + 0.5;
+					// Progress increases faster at start, slower near end (easing)
+					const newProgress = Math.min(
+						95,
+						(newTime / ESTIMATED_TIME) * 100 * (1 - Math.exp(-newTime / 20)),
+					);
+					setProgress(newProgress);
+
+					// Update message based on elapsed time
+					const newMessageIndex = Math.min(
+						Math.floor(newTime / messageInterval),
+						messages.length - 1,
+					);
+					if (newMessageIndex !== messageIndex) {
+						messageIndex = newMessageIndex;
+						setLoadingMessage(messages[messageIndex]);
+					}
+
+					return newTime;
+				});
+			}, 500);
+		} else {
+			// When loading completes, jump to 100%
+			if (progressIntervalRef.current) {
+				clearInterval(progressIntervalRef.current);
+				progressIntervalRef.current = null;
+			}
+			if (progress > 0) {
+				setProgress(100);
+				// Reset after a short delay
+				setTimeout(() => {
+					setProgress(0);
+					setElapsedTime(0);
+					setLoadingMessage("");
+				}, 500);
+			}
+		}
+
+		return () => {
+			if (progressIntervalRef.current) {
+				clearInterval(progressIntervalRef.current);
+			}
+		};
+	}, [isLoading, isAnalyzed, imageType]);
+
 	// Handle file selection
 	const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
@@ -99,15 +196,16 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 	const handleAnalyze = async () => {
 		if (!originalImageData) return;
 
+		setIsLoading(true);
+		setError(null);
+
 		if (!apiKey) {
 			setError(
 				"AI service is temporarily unavailable. Please try again later or contact support.",
 			);
+			setIsLoading(false);
 			return;
 		}
-
-		setIsLoading(true);
-		setError(null);
 
 		try {
 			// Initialize Google GenAI with v1alpha API for media_resolution support
@@ -116,7 +214,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 			// Create analysis prompt based on image type
 			const analysisPrompt =
 				imageType === "floor-plan"
-					? `Visualise this floor plan into a real photographed version of the isometric view of 3d layout. After creating the visualization, list all the rooms you can identify in the floor plan (e.g., Kitchen, Living Room, Bedroom, Bathroom, Balcony, Dining Area, etc.). Format the room list as: "Rooms: Kitchen, Living Room, Bedroom"`
+					? `Visualise this floor plan into a real photographed version of the isometric view of 3d layout in 3/4 angle. After creating the visualization, list all the rooms you can identify in the floor plan (e.g., Kitchen, Living Room, Bedroom, Bathroom, Balcony, Dining Area, etc.). Format the room list as: "Rooms: Kitchen, Living Room, Bedroom"`
 					: `Visualise this room into a premium and aesthetic interiors, photographed with DSLR. Create a stunning, high-quality interior design visualization.`;
 
 			// Build the content array with image and text
@@ -281,15 +379,16 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 	const handleEditWithPrompt = async (prompt: string) => {
 		if (!prompt.trim() || thoughtSignatures.length === 0) return;
 
+		setIsLoading(true);
+		setError(null);
+
 		if (!apiKey) {
 			setError(
 				"AI service is temporarily unavailable. Please try again later or contact support.",
 			);
+			setIsLoading(false);
 			return;
 		}
-
-		setIsLoading(true);
-		setError(null);
 
 		try {
 			const ai = new GoogleGenAI({ apiKey: apiKey, apiVersion: "v1alpha" });
@@ -755,17 +854,44 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 										<div className="flex-1 space-y-4 md:space-y-6">
 											{/* Loading State */}
 											{isLoading && (
-												<div className="bg-yellow-50 rounded-xl p-6 md:p-8 border border-yellow-200">
-													<div className="flex flex-col items-center justify-center space-y-3 md:space-y-4">
-														<div className="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-4 border-yellow-500 border-t-transparent"></div>
-														<p className="text-slate-700 font-medium text-sm md:text-base">
-															{isAnalyzed
-																? "Processing your edit..."
-																: "Analyzing your image..."}
+												<div className="flex-1 flex items-center justify-center min-h-[300px] md:min-h-[400px] bg-slate-900 rounded-xl">
+													<div className="flex flex-col items-center justify-center space-y-6 w-full px-8">
+														{/* Animated Loader */}
+														<div className="loader-wrapper">
+															<span className="loader-letter">G</span>
+															<span className="loader-letter">e</span>
+															<span className="loader-letter">n</span>
+															<span className="loader-letter">e</span>
+															<span className="loader-letter">r</span>
+															<span className="loader-letter">a</span>
+															<span className="loader-letter">t</span>
+															<span className="loader-letter">i</span>
+															<span className="loader-letter">n</span>
+															<span className="loader-letter">g</span>
+															<div className="loader"></div>
+														</div>
+														<p className="text-slate-400 text-sm md:text-base font-secondary text-center">
+															{loadingMessage || "Creating visualization..."}
 														</p>
-														<p className="text-xs md:text-sm text-slate-600">
-															This may take a few moments
-														</p>
+
+														{/* Progress Bar */}
+														<div className="w-full max-w-xs">
+															<div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
+																<motion.div
+																	className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-500 rounded-full"
+																	initial={{ width: 0 }}
+																	animate={{ width: `${progress}%` }}
+																	transition={{ duration: 0.3, ease: "easeOut" }}
+																/>
+															</div>
+															<div className="flex justify-between mt-2 text-xs text-slate-500">
+																<span>{Math.round(progress)}%</span>
+																<span>
+																	~{Math.max(0, ESTIMATED_TIME - Math.round(elapsedTime))}
+																	s remaining
+																</span>
+															</div>
+														</div>
 													</div>
 												</div>
 											)}
