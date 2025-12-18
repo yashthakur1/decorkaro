@@ -29,16 +29,20 @@ const Navbar: React.FC = () => {
 		<nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 lg:px-8 pt-4">
 			<div className="container mx-auto flex items-center justify-between gap-4">
 				{/* Logo - Separate Circle */}
-				<Link
-					to="/"
-					className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-slate-900 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex-shrink-0"
+				<a
+					href="#"
+					onClick={(e) => {
+						e.preventDefault();
+						window.scrollTo({ top: 0, behavior: "smooth" });
+					}}
+					className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-slate-900 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex-shrink-0 cursor-pointer"
 				>
 					<img
 						src="/images/dk-logo.png"
 						alt="DecorKaro"
 						className="h-8 md:h-10 w-auto brightness-0 invert"
 					/>
-				</Link>
+				</a>
 
 				{/* Main Navigation Pill */}
 				<div
@@ -60,7 +64,7 @@ const Navbar: React.FC = () => {
 							Services
 						</a>
 						<a
-							href="#packages"
+							href="#quote"
 							className="text-white hover:text-yellow-400 transition-colors font-title"
 						>
 							Packages
