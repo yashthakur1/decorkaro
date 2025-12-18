@@ -17,7 +17,12 @@ const Footer: React.FC = () => {
 							Essentials, Premium & Luxe packages. Serving Thane and across India.
 						</p>
 						<div className="flex space-x-4">
-							<a href="#" className="text-white hover:text-yellow-500 transition-colors">
+							<a
+								href="https://www.instagram.com/decorkaro.official/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-white hover:text-yellow-500 transition-colors"
+							>
 								<Instagram size={20} />
 							</a>
 							<a href="#" className="text-white hover:text-yellow-500 transition-colors">
