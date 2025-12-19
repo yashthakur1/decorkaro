@@ -64,10 +64,10 @@ const Navbar: React.FC = () => {
 							Services
 						</a>
 						<a
-							href="#quote"
+							href="#portfolio"
 							className="text-white hover:text-yellow-400 transition-colors font-title"
 						>
-							Packages
+							Our Work
 						</a>
 						<a
 							href="#testimonials"
