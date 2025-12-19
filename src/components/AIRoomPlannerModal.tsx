@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Sparkles, Image as ImageIcon, Send } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
@@ -20,6 +20,23 @@ interface ContentPart {
 interface ConversationTurn {
 	role: "user" | "model";
 	parts: ContentPart[];
+}
+
+interface ApiContentPart {
+	text?: string;
+	thoughtSignature?: string;
+	inlineData?: {
+		data: string;
+		mimeType: string;
+	};
+	mediaResolution?: {
+		level: string;
+	};
+}
+
+interface ApiContent {
+	role: "user" | "model";
+	parts: ApiContentPart[];
 }
 
 const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose }) => {
@@ -69,39 +86,49 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const [loadingMessage, setLoadingMessage] = useState("");
 	const progressIntervalRef = useRef<number | null>(null);
+	const progressRef = useRef(0); // Ref to track progress without causing re-renders
 	const ESTIMATED_TIME = 40; // 40 seconds estimated time
 
 	// Witty loading messages for floor plan
-	const floorPlanMessages = [
-		"Analysing your floor plan... 🔍",
-		"Measuring every corner with AI precision... 📐",
-		"Building walls & placing furniture... 🏠",
-		"Adding designer magic to your space... ✨",
-		"Final touches from our virtual designer... 🎨",
-	];
+	const floorPlanMessages = useMemo(
+		() => [
+			"Analysing your floor plan... 🔍",
+			"Measuring every corner with AI precision... 📐",
+			"Building walls & placing furniture... 🏠",
+			"Adding designer magic to your space... ✨",
+			"Final touches from our virtual designer... 🎨",
+		],
+		[],
+	);
 
 	// Witty loading messages for room photo
-	const roomPhotoMessages = [
-		"Scanning your room dimensions... 📷",
-		"Consulting our AI interior designer... 🤖",
-		"Picking the perfect furniture & decor... 🛋️",
-		"Adjusting lighting for that perfect vibe... 💡",
-		"Polishing every pixel to perfection... ✨",
-	];
+	const roomPhotoMessages = useMemo(
+		() => [
+			"Scanning your room dimensions... 📷",
+			"Consulting our AI interior designer... 🤖",
+			"Picking the perfect furniture & decor... 🛋️",
+			"Adjusting lighting for that perfect vibe... 💡",
+			"Polishing every pixel to perfection... ✨",
+		],
+		[],
+	);
 
 	// Witty loading messages for edits
-	const editMessages = [
-		"Processing your creative vision... 🎯",
-		"Reshuffling the furniture... 🔄",
-		"Our AI designer is on it... 👨‍🎨",
-		"Adding those finishing touches... ✨",
-	];
+	const editMessages = useMemo(
+		() => [
+			"Processing your creative vision... 🎯",
+			"Reshuffling the furniture... 🔄",
+			"Our AI designer is on it... 👨‍🎨",
+			"Adding those finishing touches... ✨",
+		],
+		[],
+	);
 
 	// Get current loading messages based on context
-	const getLoadingMessages = () => {
+	const getLoadingMessages = useCallback(() => {
 		if (isAnalyzed) return editMessages;
 		return imageType === "floor-plan" ? floorPlanMessages : roomPhotoMessages;
-	};
+	}, [isAnalyzed, imageType, editMessages, floorPlanMessages, roomPhotoMessages]);
 
 	// Progress bar effect
 	useEffect(() => {
@@ -123,6 +150,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 						(newTime / ESTIMATED_TIME) * 100 * (1 - Math.exp(-newTime / 20)),
 					);
 					setProgress(newProgress);
+					progressRef.current = newProgress;
 
 					// Update message based on elapsed time
 					const newMessageIndex = Math.min(
@@ -143,11 +171,13 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 				clearInterval(progressIntervalRef.current);
 				progressIntervalRef.current = null;
 			}
-			if (progress > 0) {
+			if (progressRef.current > 0) {
 				setProgress(100);
+				progressRef.current = 100;
 				// Reset after a short delay
 				setTimeout(() => {
 					setProgress(0);
+					progressRef.current = 0;
 					setElapsedTime(0);
 					setLoadingMessage("");
 				}, 500);
@@ -159,7 +189,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 				clearInterval(progressIntervalRef.current);
 			}
 		};
-	}, [isLoading, isAnalyzed, imageType]);
+	}, [isLoading, getLoadingMessages]);
 
 	// Handle file selection
 	const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -394,13 +424,13 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 			const ai = new GoogleGenAI({ apiKey: apiKey, apiVersion: "v1alpha" });
 
 			// Build contents with conversation history (TEXT ONLY - no images to avoid thought_signature errors)
-			const contents: any[] = conversationHistory.map((turn) => ({
+			const contents: ApiContent[] = conversationHistory.map((turn) => ({
 				role: turn.role,
 				parts: turn.parts
 					.filter((part) => part.text || part.thoughtSignature) // Only include text and thought signatures, not images
 					.map((part) => {
 						// Preserve both text and thoughtSignature in the same part if they exist together
-						const newPart: any = {};
+						const newPart: ApiContentPart = {};
 						if (part.text !== undefined) {
 							newPart.text = part.text;
 						}
@@ -415,7 +445,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 			}));
 
 			// Add thought signatures before the new user request
-			const signaturesAndNewPrompt: any[] = thoughtSignatures.map((sig) => ({
+			const signaturesAndNewPrompt: ApiContentPart[] = thoughtSignatures.map((sig) => ({
 				thoughtSignature: sig.thoughtSignature,
 			}));
 			signaturesAndNewPrompt.push({ text: prompt });
@@ -436,7 +466,6 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
 			// Extract new thought signatures and content
 			const newThoughtSignatures: ContentPart[] = [];
-			let responseText = "";
 
 			for (const candidate of response.candidates || []) {
 				const parts = candidate.content?.parts || [];
@@ -449,12 +478,8 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 						});
 					}
 
-					// Process text content
-					if (part.text) {
-						responseText += part.text;
-					}
 					// Process inline image data
-					else if (part.inlineData) {
+					if (part.inlineData) {
 						const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
 						setCurrentImage(imageUrl);
 					}
