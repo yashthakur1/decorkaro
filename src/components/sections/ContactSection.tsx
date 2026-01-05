@@ -4,8 +4,9 @@ import { useForm, ValidationError } from "@formspree/react";
 import { Phone, Mail, MapPin, MessageSquare, Clock, CheckCircle } from "lucide-react";
 
 const ContactSection: React.FC = () => {
-	const formspreeId = import.meta.env.VITE_FORMSPREE_ID || "";
-	const [state, handleSubmit] = useForm(formspreeId);
+	const formspreeId = import.meta.env.VITE_FORMSPREE_ID;
+	const [state, handleSubmit] = useForm(formspreeId || "placeholder");
+	const isFormConfigured = Boolean(formspreeId);
 
 	return (
 		<section id="contact" className="py-20 bg-slate-900 text-white">
@@ -108,7 +109,16 @@ const ContactSection: React.FC = () => {
 					>
 						<h3 className="font-title text-2xl font-bold mb-6">Book a Consultation</h3>
 
-						{state.succeeded ? (
+						{!isFormConfigured ? (
+							<div className="flex flex-col items-center justify-center py-12 text-center">
+								<p className="text-slate-600 font-secondary">
+									Contact form is being configured. Please call us at{" "}
+									<a href="tel:+919930845311" className="text-yellow-600 font-semibold hover:underline">
+										+91 99308 45311
+									</a>
+								</p>
+							</div>
+						) : state.succeeded ? (
 							<div className="flex flex-col items-center justify-center py-12 text-center">
 								<div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
 									<CheckCircle className="w-8 h-8 text-green-500" />
