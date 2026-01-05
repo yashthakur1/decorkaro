@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Sparkles, Image as ImageIcon, Send } from "lucide-react";
+import { X, Upload, Sparkles, Image as ImageIcon, Send, Download } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 
 interface AIRoomPlannerModalProps {
@@ -547,6 +547,85 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 		onClose();
 	};
 
+	// Download image with watermark
+	const handleDownloadWithWatermark = async () => {
+		if (!currentImage) return;
+
+		try {
+			// Create canvas
+			const canvas = document.createElement("canvas");
+			const ctx = canvas.getContext("2d");
+			if (!ctx) return;
+
+			// Load the generated image
+			const img = new Image();
+			img.crossOrigin = "anonymous";
+
+			await new Promise<void>((resolve, reject) => {
+				img.onload = () => resolve();
+				img.onerror = reject;
+				img.src = currentImage;
+			});
+
+			// Set canvas size to match image
+			canvas.width = img.width;
+			canvas.height = img.height;
+
+			// Draw the main image
+			ctx.drawImage(img, 0, 0);
+
+			// Load the watermark logo
+			const logo = new Image();
+			logo.crossOrigin = "anonymous";
+
+			await new Promise<void>((resolve, reject) => {
+				logo.onload = () => resolve();
+				logo.onerror = reject;
+				logo.src = "/images/dk-logo.png";
+			});
+
+			// Calculate watermark size (15% of image width, maintaining aspect ratio)
+			const watermarkWidth = canvas.width * 0.15;
+			const watermarkHeight = (logo.height / logo.width) * watermarkWidth;
+
+			// Position in bottom right with padding
+			const padding = canvas.width * 0.02;
+			const x = canvas.width - watermarkWidth - padding;
+			const y = canvas.height - watermarkHeight - padding;
+
+			// Draw watermark with reduced opacity
+			ctx.globalAlpha = 0.4;
+			ctx.drawImage(logo, x, y, watermarkWidth, watermarkHeight);
+			ctx.globalAlpha = 1.0;
+
+			// Convert to blob and download
+			canvas.toBlob(
+				(blob) => {
+					if (!blob) return;
+					const url = URL.createObjectURL(blob);
+					const link = document.createElement("a");
+					link.href = url;
+					link.download = `decorkaro-design-${Date.now()}.png`;
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+					URL.revokeObjectURL(url);
+				},
+				"image/png",
+				1.0,
+			);
+		} catch (error) {
+			console.error("Error downloading image:", error);
+			// Fallback: download without watermark
+			const link = document.createElement("a");
+			link.href = currentImage;
+			link.download = `decorkaro-design-${Date.now()}.png`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		}
+	};
+
 	if (!isOpen) return null;
 
 	return (
@@ -958,12 +1037,22 @@ Maintain the original room architecture, windows, lighting direction, and propor
 											{/* Current/Edited Image */}
 											{currentImage && (
 												<div className="bg-gradient-to-br from-green-50 to-slate-50 rounded-xl p-3 md:p-4 border-2 border-green-300">
-													<h4 className="text-xs md:text-sm font-semibold text-slate-900 mb-2 md:mb-3 flex items-center gap-2">
-														<Sparkles size={14} className="text-green-500" />
-														{conversationHistory.length > 2
-															? "Edited Image"
-															: "Analyzed Image"}
-													</h4>
+													<div className="flex items-center justify-between mb-2 md:mb-3">
+														<h4 className="text-xs md:text-sm font-semibold text-slate-900 flex items-center gap-2">
+															<Sparkles size={14} className="text-green-500" />
+															{conversationHistory.length > 2
+																? "Edited Image"
+																: "Analyzed Image"}
+														</h4>
+														<button
+															onClick={handleDownloadWithWatermark}
+															className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors"
+															title="Download with watermark"
+														>
+															<Download size={14} />
+															<span className="hidden sm:inline">Download</span>
+														</button>
+													</div>
 													<img
 														src={currentImage}
 														alt="AI processed image"
