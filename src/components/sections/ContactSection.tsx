@@ -1,30 +1,11 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { SubmitHandler, useForm } from "react-hook-form";
-import { Phone, Mail, MapPin, MessageSquare, Clock } from "lucide-react";
-
-interface FormInputs {
-	name: string;
-	email: string;
-	phone: string;
-	serviceType: string;
-	budget: string;
-	message: string;
-}
+import { useForm, ValidationError } from "@formspree/react";
+import { Phone, Mail, MapPin, MessageSquare, Clock, CheckCircle } from "lucide-react";
 
 const ContactSection: React.FC = () => {
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-		reset,
-	} = useForm<FormInputs>();
-
-	const onSubmit: SubmitHandler<FormInputs> = (data) => {
-		console.log(data);
-		alert("Thank you for your inquiry! We will contact you soon.");
-		reset();
-	};
+	const formspreeId = import.meta.env.VITE_FORMSPREE_ID || "";
+	const [state, handleSubmit] = useForm(formspreeId);
 
 	return (
 		<section id="contact" className="py-20 bg-slate-900 text-white">
@@ -127,155 +108,147 @@ const ContactSection: React.FC = () => {
 					>
 						<h3 className="font-title text-2xl font-bold mb-6">Book a Consultation</h3>
 
-						<form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-								<div>
-									<label
-										htmlFor="name"
-										className="block text-sm font-medium text-slate-700 mb-1"
-									>
-										Full Name*
-									</label>
-									<input
-										type="text"
-										id="name"
-										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-											errors.name ? "border-red-500" : "border-slate-300"
-										}`}
-										placeholder="John Doe"
-										{...register("name", { required: "Name is required" })}
-									/>
-									{errors.name && (
-										<p className="mt-1 text-sm text-red-500">{errors.name.message}</p>
-									)}
+						{state.succeeded ? (
+							<div className="flex flex-col items-center justify-center py-12 text-center">
+								<div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+									<CheckCircle className="w-8 h-8 text-green-500" />
 								</div>
-
-								<div>
-									<label
-										htmlFor="email"
-										className="block text-sm font-medium text-slate-700 mb-1"
-									>
-										Email Address*
-									</label>
-									<input
-										type="email"
-										id="email"
-										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-											errors.email ? "border-red-500" : "border-slate-300"
-										}`}
-										placeholder="john@example.com"
-										{...register("email", {
-											required: "Email is required",
-											pattern: {
-												value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-												message: "Invalid email address",
-											},
-										})}
-									/>
-									{errors.email && (
-										<p className="mt-1 text-sm text-red-500">{errors.email.message}</p>
-									)}
-								</div>
-
-								<div>
-									<label
-										htmlFor="phone"
-										className="block text-sm font-medium text-slate-700 mb-1"
-									>
-										Phone Number*
-									</label>
-									<input
-										type="tel"
-										id="phone"
-										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-											errors.phone ? "border-red-500" : "border-slate-300"
-										}`}
-										placeholder="+91 99308 45311"
-										{...register("phone", {
-											required: "Phone number is required",
-										})}
-									/>
-									{errors.phone && (
-										<p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>
-									)}
-								</div>
-
-								<div>
-									<label
-										htmlFor="serviceType"
-										className="block text-sm font-medium text-slate-700 mb-1"
-									>
-										Service Type*
-									</label>
-									<select
-										id="serviceType"
-										className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 ${
-											errors.serviceType ? "border-red-500" : "border-slate-300"
-										}`}
-										{...register("serviceType", {
-											required: "Please select a service",
-										})}
-									>
-										<option value="">Select a service</option>
-										<option value="1bhk">1BHK Package</option>
-										<option value="2bhk">2BHK Package</option>
-										<option value="3bhk">3BHK Package</option>
-										<option value="4bhk">4BHK Package</option>
-										<option value="kitchen">Modular Kitchen</option>
-										<option value="commercial">Commercial Design</option>
-									</select>
-									{errors.serviceType && (
-										<p className="mt-1 text-sm text-red-500">
-											{errors.serviceType.message}
-										</p>
-									)}
-								</div>
-
-								<div className="md:col-span-2">
-									<label
-										htmlFor="budget"
-										className="block text-sm font-medium text-slate-700 mb-1"
-									>
-										Budget Range
-									</label>
-									<select
-										id="budget"
-										className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-										{...register("budget")}
-									>
-										<option value="">Select budget range</option>
-										<option value="below-5-lacs">Below ₹5 Lakhs</option>
-										<option value="5-10-lacs">₹5 - ₹10 Lakhs</option>
-										<option value="10-20-lacs">₹10 - ₹20 Lakhs</option>
-										<option value="20-50-lacs">₹20 - ₹50 Lakhs</option>
-										<option value="above-50-lacs">Above ₹50 Lakhs</option>
-									</select>
-								</div>
-
-								<div className="md:col-span-2">
-									<label
-										htmlFor="message"
-										className="block text-sm font-medium text-slate-700 mb-1"
-									>
-										Message
-									</label>
-									<textarea
-										id="message"
-										rows={3}
-										className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
-										placeholder="Tell us about your project..."
-										{...register("message")}
-									></textarea>
-								</div>
+								<h4 className="font-title text-xl font-bold text-slate-900 mb-2">
+									Thank You!
+								</h4>
+								<p className="text-slate-600 font-secondary">
+									Your inquiry has been submitted successfully. We'll get back to you within 24 hours.
+								</p>
 							</div>
+						) : (
+							<form onSubmit={handleSubmit} className="space-y-5">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+									<div>
+										<label
+											htmlFor="name"
+											className="block text-sm font-medium text-slate-700 mb-1"
+										>
+											Full Name*
+										</label>
+										<input
+											type="text"
+											id="name"
+											name="name"
+											required
+											className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+											placeholder="John Doe"
+										/>
+										<ValidationError prefix="Name" field="name" errors={state.errors} className="mt-1 text-sm text-red-500" />
+									</div>
 
-							<button
-								type="submit"
-								className="w-full py-3 px-6 bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-semibold rounded-lg transition-colors duration-300"
-							>
-								Submit Inquiry
-							</button>
-						</form>
+									<div>
+										<label
+											htmlFor="email"
+											className="block text-sm font-medium text-slate-700 mb-1"
+										>
+											Email Address*
+										</label>
+										<input
+											type="email"
+											id="email"
+											name="email"
+											required
+											className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+											placeholder="john@example.com"
+										/>
+										<ValidationError prefix="Email" field="email" errors={state.errors} className="mt-1 text-sm text-red-500" />
+									</div>
+
+									<div>
+										<label
+											htmlFor="phone"
+											className="block text-sm font-medium text-slate-700 mb-1"
+										>
+											Phone Number*
+										</label>
+										<input
+											type="tel"
+											id="phone"
+											name="phone"
+											required
+											className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+											placeholder="+91 99308 45311"
+										/>
+										<ValidationError prefix="Phone" field="phone" errors={state.errors} className="mt-1 text-sm text-red-500" />
+									</div>
+
+									<div>
+										<label
+											htmlFor="serviceType"
+											className="block text-sm font-medium text-slate-700 mb-1"
+										>
+											Service Type*
+										</label>
+										<select
+											id="serviceType"
+											name="serviceType"
+											required
+											className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+										>
+											<option value="">Select a service</option>
+											<option value="1BHK Package">1BHK Package</option>
+											<option value="2BHK Package">2BHK Package</option>
+											<option value="3BHK Package">3BHK Package</option>
+											<option value="4BHK Package">4BHK Package</option>
+											<option value="Modular Kitchen">Modular Kitchen</option>
+											<option value="Commercial Design">Commercial Design</option>
+										</select>
+										<ValidationError prefix="Service Type" field="serviceType" errors={state.errors} className="mt-1 text-sm text-red-500" />
+									</div>
+
+									<div className="md:col-span-2">
+										<label
+											htmlFor="budget"
+											className="block text-sm font-medium text-slate-700 mb-1"
+										>
+											Budget Range
+										</label>
+										<select
+											id="budget"
+											name="budget"
+											className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+										>
+											<option value="">Select budget range</option>
+											<option value="Below ₹5 Lakhs">Below ₹5 Lakhs</option>
+											<option value="₹5 - ₹10 Lakhs">₹5 - ₹10 Lakhs</option>
+											<option value="₹10 - ₹20 Lakhs">₹10 - ₹20 Lakhs</option>
+											<option value="₹20 - ₹50 Lakhs">₹20 - ₹50 Lakhs</option>
+											<option value="Above ₹50 Lakhs">Above ₹50 Lakhs</option>
+										</select>
+									</div>
+
+									<div className="md:col-span-2">
+										<label
+											htmlFor="message"
+											className="block text-sm font-medium text-slate-700 mb-1"
+										>
+											Message
+										</label>
+										<textarea
+											id="message"
+											name="message"
+											rows={3}
+											className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+											placeholder="Tell us about your project..."
+										></textarea>
+										<ValidationError prefix="Message" field="message" errors={state.errors} className="mt-1 text-sm text-red-500" />
+									</div>
+								</div>
+
+								<button
+									type="submit"
+									disabled={state.submitting}
+									className="w-full py-3 px-6 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 disabled:cursor-not-allowed text-slate-900 font-semibold rounded-lg transition-colors duration-300"
+								>
+									{state.submitting ? "Submitting..." : "Submit Inquiry"}
+								</button>
+							</form>
+						)}
 					</motion.div>
 
 					{/* Business Hours & CTA */}
