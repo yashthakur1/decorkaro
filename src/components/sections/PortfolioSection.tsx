@@ -1,11 +1,20 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
+
+interface Project {
+	id: number;
+	title: string;
+	category: string;
+	image: string;
+	location: string;
+}
 
 const PortfolioSection: React.FC = () => {
-	const [category, setCategory] = useState("all");
+	const [category, setCategory] = useState("bedroom");
+	const [selectedImage, setSelectedImage] = useState<Project | null>(null);
 
 	const categories = [
-		{ id: "all", name: "All" },
 		{ id: "bedroom", name: "Bedroom" },
 		{ id: "living-room", name: "Living Room" },
 		{ id: "kitchen", name: "Kitchen" },
@@ -410,10 +419,7 @@ const PortfolioSection: React.FC = () => {
 		},
 	];
 
-	const filteredProjects =
-		category === "all"
-			? projects
-			: projects.filter((project) => project.category === category);
+	const filteredProjects = projects.filter((project) => project.category === category);
 
 	const itemVariants = {
 		hidden: { opacity: 0, scale: 0.9 },
@@ -471,13 +477,14 @@ const PortfolioSection: React.FC = () => {
 						{filteredProjects.map((project, index) => (
 							<motion.div
 								key={project.id}
-								className="group relative rounded-xl overflow-hidden shadow-md"
+								className="group relative rounded-xl overflow-hidden shadow-md cursor-pointer"
 								variants={itemVariants}
 								initial="hidden"
 								animate="visible"
 								exit="exit"
 								layout
 								transition={{ delay: index * 0.05 }}
+								onClick={() => setSelectedImage(project)}
 							>
 								<div className="aspect-w-4 aspect-h-3">
 									<img
@@ -518,6 +525,56 @@ const PortfolioSection: React.FC = () => {
 					</a>
 				</motion.div>
 			</div>
+
+			{/* Image Modal - No Bezels */}
+			<AnimatePresence>
+				{selectedImage && (
+					<motion.div
+						className="fixed inset-0 z-50 flex items-center justify-center bg-black/95"
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 1 }}
+						exit={{ opacity: 0 }}
+						onClick={() => setSelectedImage(null)}
+					>
+						{/* Close Button */}
+						<button
+							onClick={() => setSelectedImage(null)}
+							className="absolute top-4 right-4 z-10 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+							aria-label="Close modal"
+						>
+							<X className="w-6 h-6 text-white" />
+						</button>
+
+						{/* Image */}
+						<motion.img
+							src={selectedImage.image}
+							alt={selectedImage.title}
+							className="max-w-[95vw] max-h-[95vh] object-contain"
+							initial={{ scale: 0.9, opacity: 0 }}
+							animate={{ scale: 1, opacity: 1 }}
+							exit={{ scale: 0.9, opacity: 0 }}
+							transition={{ type: "spring", damping: 25, stiffness: 300 }}
+							onClick={(e) => e.stopPropagation()}
+						/>
+
+						{/* Image Title - Bottom Overlay */}
+						<motion.div
+							className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent"
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: 20 }}
+							transition={{ delay: 0.1 }}
+						>
+							<h3 className="font-title text-2xl font-bold text-white text-center">
+								{selectedImage.title}
+							</h3>
+							<p className="text-slate-300 text-center font-secondary mt-1">
+								{selectedImage.location}
+							</p>
+						</motion.div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</section>
 	);
 };
