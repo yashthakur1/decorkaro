@@ -78,6 +78,21 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 		"Scandinavian Style",
 	]);
 
+	// Detailed style descriptions for sophisticated AI prompts
+	const styleDescriptions: Record<string, string> = {
+		"Boho Style": `a bohemian aesthetic characterized by eclectic patterns, rich earthy tones, and globally-inspired textiles. Layer natural textures like rattan, jute, and macramé with colorful cushions and vintage rugs. Incorporate plants abundantly, use warm ambient lighting with lanterns and string lights, and mix patterns freely. The overall mood is relaxed, artistic, and warmly inviting, celebrating handcrafted details and cultural diversity.`,
+
+		"Modern Style": `a contemporary modern aesthetic characterized by sleek lines, neutral color palettes, and sophisticated simplicity. Feature clean geometric furniture with smooth surfaces, use a monochromatic scheme with strategic accent colors, and incorporate materials like glass, polished metal, and lacquered finishes. Lighting should be architectural and statement-making. The overall mood is polished, refined, and effortlessly elegant, prioritizing function and form in equal measure.`,
+
+		"Rustic Style": `a rustic farmhouse aesthetic characterized by natural imperfections, reclaimed materials, and countryside charm. Feature exposed wooden beams, distressed furniture with weathered patina, and vintage accessories. Use warm earth tones, natural linen fabrics, and wrought iron accents. Incorporate mason jars, woven baskets, and antique finds. The overall mood is cozy, welcoming, and authentically lived-in, celebrating the beauty of natural aging and handcrafted simplicity.`,
+
+		"Minimalist Style": `a warm minimalism blended with thoughtfully crafted details, characterized by clean lines, natural wood tones, and purposeful restraint. Feature simple yet quality furniture pieces, neutral walls, and understated decor that allows materials and craftsmanship to take center stage. Use subtle textures and a limited color palette. The overall mood is calm, airy, and quietly sophisticated, balancing simplicity with tactile richness and intentional design.`,
+
+		"Industrial Style": `an industrial loft aesthetic characterized by raw, unfinished elements and urban sophistication. Feature exposed brick walls, metal piping, and concrete surfaces. Use Edison bulbs, metal pendant lights, and salvaged factory furniture. Incorporate leather seating, weathered wood, and utilitarian accessories. The color palette centers on grays, blacks, and warm metallics. The overall mood is edgy, authentic, and boldly urban, celebrating the beauty of structural honesty.`,
+
+		"Scandinavian Style": `a Scandinavian aesthetic blended with mid-century influences, characterized by clean lines, light wood tones, and hygge-inspired comfort. Feature minimal furniture with organic curves, soft textiles in neutral and muted tones, and abundant natural light. Use wool throws, sheepskin rugs, and simple ceramics. Incorporate plants and pleated lamp shades. The overall mood is warm, unfussy, and serenely inviting, prioritizing comfort, functionality, and natural beauty.`,
+	};
+
 	// State for mobile tab view
 	const [activeTab, setActiveTab] = useState<"controls" | "preview">("controls");
 
@@ -245,7 +260,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 			const analysisPrompt =
 				imageType === "floor-plan"
 					? `Visualise this floor plan into a real photographed version of the isometric view of 3d layout in 3/4 angle. After creating the visualization, list all the rooms you can identify in the floor plan (e.g., Kitchen, Living Room, Bedroom, Bathroom, Balcony, Dining Area, etc.). Format the room list as: "Rooms: Kitchen, Living Room, Bedroom"`
-					: `Visualise this room into a premium and aesthetic interiors, photographed with DSLR. Create a stunning, high-quality interior design visualization.`;
+					: `Restyle this room with premium, aesthetic interiors photographed with DSLR quality. Create a stunning, high-quality interior design visualization while maintaining the original room architecture, windows, lighting direction, and proportions exactly as they are. Transform only the interior materials, finishes, furniture, and decor. Keep all structural elements, window positions, and natural light sources intact.`;
 
 			// Build the content array with image and text
 			const contents: ConversationTurn[] = [
@@ -739,11 +754,16 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 														{availableStyles.map((style, idx) => (
 															<button
 																key={idx}
-																onClick={() =>
-																	handleQuickPrompt(
-																		`Transform this room into ${style.toLowerCase()}, maintaining the room layout and photographed with DSLR quality`,
-																	)
-																}
+																onClick={() => {
+																	const description = styleDescriptions[style] || style.toLowerCase();
+																	const prompt = `Restyle this room in ${description}
+
+Maintain the original room architecture, windows, lighting direction, and proportions exactly as they are, and transform only the interior materials, finishes, furniture, and decor.
+→ Maintain architecture and lighting completely intact.
+→ Replace only finishes, color palette, furniture, and decor in the specified style.
+→ Photograph with DSLR quality, preserving natural light sources.`;
+																	handleQuickPrompt(prompt);
+																}}
 																disabled={isLoading}
 																className="px-2.5 md:px-4 py-1.5 md:py-2 bg-purple-500 hover:bg-purple-600 text-white text-xs md:text-sm font-medium rounded-lg transition-colors disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
 															>
