@@ -1,43 +1,44 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Sparkles, Image as ImageIcon, Send, Download } from "lucide-react";
-import { GoogleGenAI } from "@google/genai";
+import {
+	GoogleGenAI,
+	Modality,
+	PartMediaResolutionLevel,
+	type Content,
+	type GenerateContentConfig,
+	type GenerateContentResponse,
+} from "@google/genai";
+
+// Latest Gemini image model (Nano Banana 2.1). gemini-3-pro-image-preview was shut down on 2026-06-25.
+const IMAGE_MODEL = "gemini-nano-banana-2.1";
+
+const GENERATION_CONFIG: GenerateContentConfig = {
+	responseModalities: [Modality.TEXT, Modality.IMAGE],
+	imageConfig: { imageSize: "2K" },
+};
+
+// Collect visible text and the final image from a response, skipping intermediate "thought" parts.
+const extractOutput = (response: GenerateContentResponse) => {
+	const parts = response.candidates?.[0]?.content?.parts || [];
+	let text = "";
+	let image: string | null = null;
+	for (const part of parts) {
+		if (part.thought) continue;
+		if (part.text) text += part.text;
+		if (part.inlineData?.data) {
+			image = `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`;
+		}
+	}
+	return { parts, text, image };
+};
 
 interface AIRoomPlannerModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 }
 
-interface ContentPart {
-	text?: string;
-	inlineData?: {
-		data: string;
-		mimeType: string;
-	};
-	thoughtSignature?: string;
-}
-
-interface ConversationTurn {
-	role: "user" | "model";
-	parts: ContentPart[];
-}
-
-interface ApiContentPart {
-	text?: string;
-	thoughtSignature?: string;
-	inlineData?: {
-		data: string;
-		mimeType: string;
-	};
-	mediaResolution?: {
-		level: string;
-	};
-}
-
-interface ApiContent {
-	role: "user" | "model";
-	parts: ApiContentPart[];
-}
+type ConversationTurn = Content;
 
 const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose }) => {
 	// State for file handling
@@ -52,15 +53,11 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 	// API key from environment variable
 	const apiKey = import.meta.env.VITE_GOOGLE_NANO_BANANA_KEY || "";
 
-	// State for model selection
-	const [selectedModel] = useState<string>("gemini-3-pro-image-preview");
-
 	// State for image type selection
 	const [imageType, setImageType] = useState<"floor-plan" | "room-photo">("floor-plan");
 
-	// State for conversation and thought signatures
+	// Conversation history (model parts are kept verbatim so thought signatures are preserved)
 	const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
-	const [thoughtSignatures, setThoughtSignatures] = useState<ContentPart[]>([]);
 	const [currentEditPrompt, setCurrentEditPrompt] = useState<string>("");
 
 	// State to track if initial analysis is done
@@ -229,7 +226,6 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
 			// Reset state when new file is selected
 			setConversationHistory([]);
-			setThoughtSignatures([]);
 			setIsAnalyzed(false);
 			setCurrentImage(null);
 			setError(null);
@@ -253,8 +249,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 		}
 
 		try {
-			// Initialize Google GenAI with v1alpha API for media_resolution support
-			const ai = new GoogleGenAI({ apiKey: apiKey, apiVersion: "v1alpha" });
+			const ai = new GoogleGenAI({ apiKey });
 
 			// Create analysis prompt based on image type
 			const analysisPrompt =
@@ -262,69 +257,34 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 					? `Visualise this floor plan into a real photographed version of the isometric view of 3d layout in 3/4 angle. After creating the visualization, list all the rooms you can identify in the floor plan (e.g., Kitchen, Living Room, Bedroom, Bathroom, Balcony, Dining Area, etc.). Format the room list as: "Rooms: Kitchen, Living Room, Bedroom"`
 					: `Restyle this room with premium, aesthetic interiors photographed with DSLR quality. Create a stunning, high-quality interior design visualization while maintaining the original room architecture, windows, lighting direction, and proportions exactly as they are. Transform only the interior materials, finishes, furniture, and decor. Keep all structural elements, window positions, and natural light sources intact.`;
 
-			// Build the content array with image and text
-			const contents: ConversationTurn[] = [
-				{
-					role: "user",
-					parts: [
-						{ text: analysisPrompt },
-						{
-							inlineData: {
-								data: originalImageData,
-								mimeType: selectedFile?.type || "image/jpeg",
-							},
+			const userTurn: ConversationTurn = {
+				role: "user",
+				parts: [
+					{ text: analysisPrompt },
+					{
+						inlineData: {
+							data: originalImageData,
+							mimeType: selectedFile?.type || "image/jpeg",
 						},
-					],
-				},
-			];
+						mediaResolution: { level: PartMediaResolutionLevel.MEDIA_RESOLUTION_HIGH },
+					},
+				],
+			};
 
-			// Call Gemini API with media_resolution
 			const response = await ai.models.generateContent({
-				model: selectedModel,
-				contents: contents.map((turn) => ({
-					role: turn.role,
-					parts: turn.parts.map((part) => {
-						if (part.inlineData) {
-							return {
-								inlineData: part.inlineData,
-								mediaResolution: {
-									level: "media_resolution_high",
-								},
-							};
-						}
-						return part;
-					}),
-				})),
+				model: IMAGE_MODEL,
+				contents: [userTurn],
+				config: GENERATION_CONFIG,
 			});
 
-			console.log("Analysis Response:", JSON.stringify(response, null, 2));
-
-			// Extract response parts and thought signatures
-			const newThoughtSignatures: ContentPart[] = [];
-			let analysisText = "";
-
-			for (const candidate of response.candidates || []) {
-				const parts = candidate.content?.parts || [];
-
-				for (const part of parts) {
-					// Capture ALL thought signatures from the response
-					if (part.thoughtSignature) {
-						newThoughtSignatures.push({
-							thoughtSignature: part.thoughtSignature,
-						});
-					}
-
-					// Process text content
-					if (part.text) {
-						analysisText += part.text;
-					}
-					// Process inline image data
-					else if (part.inlineData) {
-						const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-						setCurrentImage(imageUrl);
-					}
-				}
+			const { parts, text: analysisText, image } = extractOutput(response);
+			if (!image) {
+				throw new Error(
+					response.promptFeedback?.blockReasonMessage ||
+						"The model did not return an image. Please try again or use a different image.",
+				);
 			}
+			setCurrentImage(image);
 
 			// Extract room names for floor plans
 			if (imageType === "floor-plan") {
@@ -338,34 +298,12 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 				}
 			}
 
-			// Store thought signatures for next turn
-			setThoughtSignatures(newThoughtSignatures);
-
-			// Add to conversation history
-			const userTurn: ConversationTurn = {
-				role: "user",
-				parts: [
-					{ text: analysisPrompt },
-					{
-						inlineData: {
-							data: originalImageData,
-							mimeType: selectedFile?.type || "image/jpeg",
-						},
-					},
-				],
-			};
-
-			const modelTurn: ConversationTurn = {
-				role: "model",
-				parts: response.candidates?.[0]?.content?.parts || [],
-			};
+			const modelTurn: ConversationTurn = { role: "model", parts };
 
 			setConversationHistory([userTurn, modelTurn]);
 			setIsAnalyzed(true);
 			setActiveTab("preview"); // Switch to preview tab on mobile after analysis
 
-			console.log("Analysis complete. Text:", analysisText);
-			console.log("Thought signatures captured:", newThoughtSignatures.length);
 		} catch (error) {
 			console.error("Error analyzing image:", error);
 			let errorMessage = "Failed to analyze image. Please try again.";
@@ -401,7 +339,6 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
 	const handleReset = () => {
 		setConversationHistory([]);
-		setThoughtSignatures([]);
 		setIsAnalyzed(false);
 		setCurrentImage(null);
 		setError(null);
@@ -422,7 +359,7 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 
 	// Helper function to handle edit with a specific prompt
 	const handleEditWithPrompt = async (prompt: string) => {
-		if (!prompt.trim() || thoughtSignatures.length === 0) return;
+		if (!prompt.trim() || conversationHistory.length === 0) return;
 
 		setIsLoading(true);
 		setError(null);
@@ -436,90 +373,33 @@ const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose
 		}
 
 		try {
-			const ai = new GoogleGenAI({ apiKey: apiKey, apiVersion: "v1alpha" });
+			const ai = new GoogleGenAI({ apiKey });
 
-			// Build contents with conversation history (TEXT ONLY - no images to avoid thought_signature errors)
-			const contents: ApiContent[] = conversationHistory.map((turn) => ({
-				role: turn.role,
-				parts: turn.parts
-					.filter((part) => part.text || part.thoughtSignature) // Only include text and thought signatures, not images
-					.map((part) => {
-						// Preserve both text and thoughtSignature in the same part if they exist together
-						const newPart: ApiContentPart = {};
-						if (part.text !== undefined) {
-							newPart.text = part.text;
-						}
-						if (part.thoughtSignature !== undefined) {
-							newPart.thoughtSignature = part.thoughtSignature;
-						}
-						return newPart;
-					})
-					.filter(
-						(part) => part.text !== undefined || part.thoughtSignature !== undefined,
-					), // Remove parts with undefined values
-			}));
-
-			// Add thought signatures before the new user request
-			const signaturesAndNewPrompt: ApiContentPart[] = thoughtSignatures.map((sig) => ({
-				thoughtSignature: sig.thoughtSignature,
-			}));
-			signaturesAndNewPrompt.push({ text: prompt });
-
-			contents.push({
-				role: "user",
-				parts: signaturesAndNewPrompt,
-			});
-
-			console.log("Editing with contents:", JSON.stringify(contents, null, 2));
+			// Send the full history back unchanged (images + thought signatures) so the model
+			// can edit its previous image, as required for multi-turn image editing.
+			const userTurn: ConversationTurn = { role: "user", parts: [{ text: prompt }] };
 
 			const response = await ai.models.generateContent({
-				model: selectedModel,
-				contents: contents,
+				model: IMAGE_MODEL,
+				contents: [...conversationHistory, userTurn],
+				config: GENERATION_CONFIG,
 			});
 
-			console.log("Edit Response:", JSON.stringify(response, null, 2));
-
-			// Extract new thought signatures and content
-			const newThoughtSignatures: ContentPart[] = [];
-
-			for (const candidate of response.candidates || []) {
-				const parts = candidate.content?.parts || [];
-
-				for (const part of parts) {
-					// Capture ALL thought signatures from the response
-					if (part.thoughtSignature) {
-						newThoughtSignatures.push({
-							thoughtSignature: part.thoughtSignature,
-						});
-					}
-
-					// Process inline image data
-					if (part.inlineData) {
-						const imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-						setCurrentImage(imageUrl);
-					}
-				}
+			const { parts, image } = extractOutput(response);
+			if (!image) {
+				throw new Error(
+					response.promptFeedback?.blockReasonMessage ||
+						"The model did not return an image. Try rephrasing your edit.",
+				);
 			}
+			setCurrentImage(image);
 
-			// Update thought signatures for next turn
-			setThoughtSignatures(newThoughtSignatures);
-
-			// Add to conversation history
-			const userTurn: ConversationTurn = {
-				role: "user",
-				parts: [{ text: prompt }],
-			};
-
-			const modelTurn: ConversationTurn = {
-				role: "model",
-				parts: response.candidates?.[0]?.content?.parts || [],
-			};
+			const modelTurn: ConversationTurn = { role: "model", parts };
 
 			setConversationHistory([...conversationHistory, userTurn, modelTurn]);
 			setCurrentEditPrompt("");
 			setActiveTab("preview"); // Switch to preview tab on mobile after edit
 
-			console.log("Edit complete. New signatures:", newThoughtSignatures.length);
 		} catch (error) {
 			console.error("Error editing image:", error);
 			let errorMessage = "Failed to edit image. Please try again.";
@@ -930,12 +810,14 @@ Maintain the original room architecture, windows, lighting direction, and propor
 														<span className="font-bold">
 															{turn.role === "user" ? "👤" : "🤖"}
 														</span>{" "}
-														{turn.parts
+														{(turn.parts || [])
+														.filter((part) => !part.thought)
 															.map((part) => part.text)
 															.filter(Boolean)
 															.join(" ")
 															.substring(0, 60)}
-														{turn.parts
+														{(turn.parts || [])
+														.filter((part) => !part.thought)
 															.map((part) => part.text)
 															.filter(Boolean)
 															.join(" ").length > 60 && "..."}
@@ -1068,7 +950,8 @@ Maintain the original room architecture, windows, lighting direction, and propor
 														AI Response:
 													</p>
 													<p className="text-xs md:text-sm text-slate-600 whitespace-pre-line">
-														{conversationHistory[conversationHistory.length - 1]?.parts
+														{(conversationHistory[conversationHistory.length - 1]?.parts || [])
+														.filter((part) => !part.thought)
 															.map((part) => part.text)
 															.filter(Boolean)
 															.join(" ")}
