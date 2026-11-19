@@ -1,972 +1,405 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Sparkles, Image as ImageIcon, Send, Download } from "lucide-react";
-import {
-	GoogleGenAI,
-	Modality,
-	PartMediaResolutionLevel,
-	type Content,
-	type GenerateContentConfig,
-	type GenerateContentResponse,
-} from "@google/genai";
+import React, { useEffect, useRef, useState } from "react";
+import { Download, ImagePlus, RotateCcw } from "lucide-react";
+import Dialog from "./Dialog";
 
-// Latest Gemini image model (Nano Banana 2.1). gemini-3-pro-image-preview was shut down on 2026-06-25.
-const IMAGE_MODEL = "gemini-nano-banana-2.1";
+type ImageType = "floor-plan" | "room-photo";
 
-const GENERATION_CONFIG: GenerateContentConfig = {
-	responseModalities: [Modality.TEXT, Modality.IMAGE],
-	imageConfig: { imageSize: "2K" },
-};
-
-// Collect visible text and the final image from a response, skipping intermediate "thought" parts.
-const extractOutput = (response: GenerateContentResponse) => {
-	const parts = response.candidates?.[0]?.content?.parts || [];
-	let text = "";
-	let image: string | null = null;
-	for (const part of parts) {
-		if (part.thought) continue;
-		if (part.text) text += part.text;
-		if (part.inlineData?.data) {
-			image = `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`;
-		}
-	}
-	return { parts, text, image };
-};
-
-interface AIRoomPlannerModalProps {
-	isOpen: boolean;
-	onClose: () => void;
+interface Version {
+	id: number;
+	label: string;
+	url: string; // object URL of the generated image
+	blob: Blob;
 }
 
-type ConversationTurn = Content;
+interface Props {
+	isOpen: boolean;
+	onClose: () => void;
+	onBookConsultation: () => void;
+}
 
-const AIRoomPlannerModal: React.FC<AIRoomPlannerModalProps> = ({ isOpen, onClose }) => {
-	// State for file handling
-	const [selectedFile, setSelectedFile] = useState<File | null>(null);
-	const [preview, setPreview] = useState<string | null>(null);
-	const [originalImageData, setOriginalImageData] = useState<string | null>(null);
+const STYLES: { name: string; description: string }[] = [
+	{
+		name: "Modern",
+		description:
+			"a contemporary modern aesthetic: sleek lines, a neutral palette with strategic accents, clean geometric furniture, glass, polished metal and lacquered finishes, and architectural statement lighting. Polished, refined and elegant",
+	},
+	{
+		name: "Minimalist",
+		description:
+			"warm minimalism: clean lines, natural wood tones, purposeful restraint, quality furniture, neutral walls and understated decor that lets materials and craftsmanship lead. Calm, airy and quietly sophisticated",
+	},
+	{
+		name: "Scandinavian",
+		description:
+			"Scandinavian with mid-century influences: light wood, organic curves, soft neutral textiles, wool throws, sheepskin rugs, simple ceramics, plants and pleated lamp shades. Warm, unfussy and serene",
+	},
+	{
+		name: "Industrial",
+		description:
+			"an industrial loft look: exposed brick, metal piping, concrete, Edison bulbs, metal pendants, leather seating and weathered wood in greys, blacks and warm metallics. Edgy and authentic",
+	},
+	{
+		name: "Rustic",
+		description:
+			"rustic farmhouse: exposed wooden beams, distressed furniture, warm earth tones, natural linen, wrought iron accents, woven baskets and antique finds. Cozy and lived-in",
+	},
+	{
+		name: "Boho",
+		description:
+			"bohemian: eclectic patterns, rich earthy tones, rattan, jute and macramé, colourful cushions, vintage rugs, abundant plants and warm lantern lighting. Relaxed and artistic",
+	},
+];
 
-	// State for API and loading
-	const [isLoading, setIsLoading] = useState(false);
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+/** Downscale to ≤1600px JPEG so requests stay small and fast. */
+async function toApiImage(source: Blob): Promise<{ data: string; mimeType: string }> {
+	const bitmap = await createImageBitmap(source);
+	const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+	const canvas = document.createElement("canvas");
+	canvas.width = Math.round(bitmap.width * scale);
+	canvas.height = Math.round(bitmap.height * scale);
+	const ctx = canvas.getContext("2d")!;
+	ctx.fillStyle = "#fff";
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+	bitmap.close();
+	const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+	return { data: dataUrl.split(",")[1], mimeType: "image/jpeg" };
+}
+
+const AIRoomPlannerModal: React.FC<Props> = ({ isOpen, onClose, onBookConsultation }) => {
+	const [imageType, setImageType] = useState<ImageType>("floor-plan");
+	const [upload, setUpload] = useState<{ file: File; url: string } | null>(null);
+	const [versions, setVersions] = useState<Version[]>([]);
+	const [activeId, setActiveId] = useState<number | null>(null);
+	const [rooms, setRooms] = useState<string[]>([]);
+	const [prompt, setPrompt] = useState("");
+	const [busy, setBusy] = useState<string | null>(null); // label of the running request
+	const [elapsed, setElapsed] = useState(0);
 	const [error, setError] = useState<string | null>(null);
+	const fileInput = useRef<HTMLInputElement>(null);
+	const nextId = useRef(1);
+	const urlsRef = useRef<string[]>([]);
 
-	// API key from environment variable
-	const apiKey = import.meta.env.VITE_GOOGLE_NANO_BANANA_KEY || "";
+	const active = versions.find((v) => v.id === activeId) ?? null;
 
-	// State for image type selection
-	const [imageType, setImageType] = useState<"floor-plan" | "room-photo">("floor-plan");
-
-	// Conversation history (model parts are kept verbatim so thought signatures are preserved)
-	const [conversationHistory, setConversationHistory] = useState<ConversationTurn[]>([]);
-	const [currentEditPrompt, setCurrentEditPrompt] = useState<string>("");
-
-	// State to track if initial analysis is done
-	const [isAnalyzed, setIsAnalyzed] = useState<boolean>(false);
-	const [currentImage, setCurrentImage] = useState<string | null>(null);
-
-	// State for room/style buttons
-	const [detectedRooms, setDetectedRooms] = useState<string[]>([]);
-	const [availableStyles] = useState<string[]>([
-		"Boho Style",
-		"Modern Style",
-		"Rustic Style",
-		"Minimalist Style",
-		"Industrial Style",
-		"Scandinavian Style",
-	]);
-
-	// Detailed style descriptions for sophisticated AI prompts
-	const styleDescriptions: Record<string, string> = {
-		"Boho Style": `a bohemian aesthetic characterized by eclectic patterns, rich earthy tones, and globally-inspired textiles. Layer natural textures like rattan, jute, and macramé with colorful cushions and vintage rugs. Incorporate plants abundantly, use warm ambient lighting with lanterns and string lights, and mix patterns freely. The overall mood is relaxed, artistic, and warmly inviting, celebrating handcrafted details and cultural diversity.`,
-
-		"Modern Style": `a contemporary modern aesthetic characterized by sleek lines, neutral color palettes, and sophisticated simplicity. Feature clean geometric furniture with smooth surfaces, use a monochromatic scheme with strategic accent colors, and incorporate materials like glass, polished metal, and lacquered finishes. Lighting should be architectural and statement-making. The overall mood is polished, refined, and effortlessly elegant, prioritizing function and form in equal measure.`,
-
-		"Rustic Style": `a rustic farmhouse aesthetic characterized by natural imperfections, reclaimed materials, and countryside charm. Feature exposed wooden beams, distressed furniture with weathered patina, and vintage accessories. Use warm earth tones, natural linen fabrics, and wrought iron accents. Incorporate mason jars, woven baskets, and antique finds. The overall mood is cozy, welcoming, and authentically lived-in, celebrating the beauty of natural aging and handcrafted simplicity.`,
-
-		"Minimalist Style": `a warm minimalism blended with thoughtfully crafted details, characterized by clean lines, natural wood tones, and purposeful restraint. Feature simple yet quality furniture pieces, neutral walls, and understated decor that allows materials and craftsmanship to take center stage. Use subtle textures and a limited color palette. The overall mood is calm, airy, and quietly sophisticated, balancing simplicity with tactile richness and intentional design.`,
-
-		"Industrial Style": `an industrial loft aesthetic characterized by raw, unfinished elements and urban sophistication. Feature exposed brick walls, metal piping, and concrete surfaces. Use Edison bulbs, metal pendant lights, and salvaged factory furniture. Incorporate leather seating, weathered wood, and utilitarian accessories. The color palette centers on grays, blacks, and warm metallics. The overall mood is edgy, authentic, and boldly urban, celebrating the beauty of structural honesty.`,
-
-		"Scandinavian Style": `a Scandinavian aesthetic blended with mid-century influences, characterized by clean lines, light wood tones, and hygge-inspired comfort. Feature minimal furniture with organic curves, soft textiles in neutral and muted tones, and abundant natural light. Use wool throws, sheepskin rugs, and simple ceramics. Incorporate plants and pleated lamp shades. The overall mood is warm, unfussy, and serenely inviting, prioritizing comfort, functionality, and natural beauty.`,
-	};
-
-	// State for mobile tab view
-	const [activeTab, setActiveTab] = useState<"controls" | "preview">("controls");
-
-	// State for progress bar
-	const [progress, setProgress] = useState(0);
-	const [elapsedTime, setElapsedTime] = useState(0);
-	const [loadingMessage, setLoadingMessage] = useState("");
-	const progressIntervalRef = useRef<number | null>(null);
-	const progressRef = useRef(0); // Ref to track progress without causing re-renders
-	const ESTIMATED_TIME = 40; // 40 seconds estimated time
-
-	// Witty loading messages for floor plan
-	const floorPlanMessages = useMemo(
-		() => [
-			"Analysing your floor plan... 🔍",
-			"Measuring every corner with AI precision... 📐",
-			"Building walls & placing furniture... 🏠",
-			"Adding designer magic to your space... ✨",
-			"Final touches from our virtual designer... 🎨",
-		],
-		[],
-	);
-
-	// Witty loading messages for room photo
-	const roomPhotoMessages = useMemo(
-		() => [
-			"Scanning your room dimensions... 📷",
-			"Consulting our AI interior designer... 🤖",
-			"Picking the perfect furniture & decor... 🛋️",
-			"Adjusting lighting for that perfect vibe... 💡",
-			"Polishing every pixel to perfection... ✨",
-		],
-		[],
-	);
-
-	// Witty loading messages for edits
-	const editMessages = useMemo(
-		() => [
-			"Processing your creative vision... 🎯",
-			"Reshuffling the furniture... 🔄",
-			"Our AI designer is on it... 👨‍🎨",
-			"Adding those finishing touches... ✨",
-		],
-		[],
-	);
-
-	// Get current loading messages based on context
-	const getLoadingMessages = useCallback(() => {
-		if (isAnalyzed) return editMessages;
-		return imageType === "floor-plan" ? floorPlanMessages : roomPhotoMessages;
-	}, [isAnalyzed, imageType, editMessages, floorPlanMessages, roomPhotoMessages]);
-
-	// Progress bar effect
 	useEffect(() => {
-		if (isLoading) {
-			setProgress(0);
-			setElapsedTime(0);
-			const messages = getLoadingMessages();
-			setLoadingMessage(messages[0]);
+		if (!busy) return;
+		setElapsed(0);
+		const t = window.setInterval(() => setElapsed((s) => s + 1), 1000);
+		return () => window.clearInterval(t);
+	}, [busy]);
 
-			let messageIndex = 0;
-			const messageInterval = ESTIMATED_TIME / messages.length;
+	// Free object URLs on unmount.
+	useEffect(() => () => urlsRef.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
-			progressIntervalRef.current = window.setInterval(() => {
-				setElapsedTime((prev) => {
-					const newTime = prev + 0.5;
-					// Progress increases faster at start, slower near end (easing)
-					const newProgress = Math.min(
-						95,
-						(newTime / ESTIMATED_TIME) * 100 * (1 - Math.exp(-newTime / 20)),
-					);
-					setProgress(newProgress);
-					progressRef.current = newProgress;
-
-					// Update message based on elapsed time
-					const newMessageIndex = Math.min(
-						Math.floor(newTime / messageInterval),
-						messages.length - 1,
-					);
-					if (newMessageIndex !== messageIndex) {
-						messageIndex = newMessageIndex;
-						setLoadingMessage(messages[messageIndex]);
-					}
-
-					return newTime;
-				});
-			}, 500);
-		} else {
-			// When loading completes, jump to 100%
-			if (progressIntervalRef.current) {
-				clearInterval(progressIntervalRef.current);
-				progressIntervalRef.current = null;
-			}
-			if (progressRef.current > 0) {
-				setProgress(100);
-				progressRef.current = 100;
-				// Reset after a short delay
-				setTimeout(() => {
-					setProgress(0);
-					progressRef.current = 0;
-					setElapsedTime(0);
-					setLoadingMessage("");
-				}, 500);
-			}
-		}
-
-		return () => {
-			if (progressIntervalRef.current) {
-				clearInterval(progressIntervalRef.current);
-			}
-		};
-	}, [isLoading, getLoadingMessages]);
-
-	// Handle file selection
-	const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		if (file) {
-			setSelectedFile(file);
-			const reader = new FileReader();
-			reader.onloadend = () => {
-				setPreview(reader.result as string);
-			};
-			reader.readAsDataURL(file);
-
-			// Convert to base64 for API usage
-			const base64Reader = new FileReader();
-			base64Reader.onloadend = () => {
-				if (typeof base64Reader.result === "string") {
-					const base64 = base64Reader.result.split(",")[1];
-					setOriginalImageData(base64);
-				}
-			};
-			base64Reader.readAsDataURL(file);
-
-			// Reset state when new file is selected
-			setConversationHistory([]);
-			setIsAnalyzed(false);
-			setCurrentImage(null);
-			setError(null);
-			setDetectedRooms([]);
-		}
+	const reset = () => {
+		urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+		urlsRef.current = [];
+		setUpload(null);
+		setVersions([]);
+		setActiveId(null);
+		setRooms([]);
+		setPrompt("");
+		setError(null);
 	};
 
-	// Initial analysis of uploaded image
-	const handleAnalyze = async () => {
-		if (!originalImageData) return;
+	const chooseFile = (file: File | undefined) => {
+		if (!file) return;
+		if (!file.type.startsWith("image/")) return setError("Choose an image file (JPG, PNG or WebP).");
+		if (file.size > MAX_UPLOAD_BYTES) return setError("That image is over 15 MB. Choose a smaller file.");
+		reset();
+		const url = URL.createObjectURL(file);
+		urlsRef.current.push(url);
+		setUpload({ file, url });
+	};
 
-		setIsLoading(true);
+	const run = async (mode: "analyze" | "edit", label: string, editPrompt?: string) => {
+		const source = mode === "analyze" ? upload?.file : active?.blob;
+		if (!source) return;
+		setBusy(label);
 		setError(null);
-
-		if (!apiKey) {
-			setError(
-				"AI service is temporarily unavailable. Please try again later or contact support.",
-			);
-			setIsLoading(false);
-			return;
-		}
-
 		try {
-			const ai = new GoogleGenAI({ apiKey });
-
-			// Create analysis prompt based on image type
-			const analysisPrompt =
-				imageType === "floor-plan"
-					? `Visualise this floor plan into a real photographed version of the isometric view of 3d layout in 3/4 angle. After creating the visualization, list all the rooms you can identify in the floor plan (e.g., Kitchen, Living Room, Bedroom, Bathroom, Balcony, Dining Area, etc.). Format the room list as: "Rooms: Kitchen, Living Room, Bedroom"`
-					: `Restyle this room with premium, aesthetic interiors photographed with DSLR quality. Create a stunning, high-quality interior design visualization while maintaining the original room architecture, windows, lighting direction, and proportions exactly as they are. Transform only the interior materials, finishes, furniture, and decor. Keep all structural elements, window positions, and natural light sources intact.`;
-
-			const userTurn: ConversationTurn = {
-				role: "user",
-				parts: [
-					{ text: analysisPrompt },
-					{
-						inlineData: {
-							data: originalImageData,
-							mimeType: selectedFile?.type || "image/jpeg",
-						},
-						mediaResolution: { level: PartMediaResolutionLevel.MEDIA_RESOLUTION_HIGH },
-					},
-				],
-			};
-
-			const response = await ai.models.generateContent({
-				model: IMAGE_MODEL,
-				contents: [userTurn],
-				config: GENERATION_CONFIG,
+			const image = await toApiImage(source);
+			const res = await fetch("/api/room-planner", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ mode, imageType, image, prompt: editPrompt }),
 			});
-
-			const { parts, text: analysisText, image } = extractOutput(response);
-			if (!image) {
-				throw new Error(
-					response.promptFeedback?.blockReasonMessage ||
-						"The model did not return an image. Please try again or use a different image.",
-				);
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				throw new Error(body.error || "The design couldn't be generated. Try again.");
 			}
-			setCurrentImage(image);
-
-			// Extract room names for floor plans
-			if (imageType === "floor-plan") {
-				const roomsMatch = analysisText.match(/Rooms:\s*(.+?)(?:\n|$)/i);
-				if (roomsMatch) {
-					const rooms = roomsMatch[1]
-						.split(",")
-						.map((room) => room.trim())
-						.filter(Boolean);
-					setDetectedRooms(rooms);
+			const blob = await res.blob();
+			if (mode === "analyze") {
+				try {
+					setRooms(JSON.parse(decodeURIComponent(res.headers.get("x-planner-rooms") || "%5B%5D")));
+				} catch {
+					setRooms([]);
 				}
 			}
-
-			const modelTurn: ConversationTurn = { role: "model", parts };
-
-			setConversationHistory([userTurn, modelTurn]);
-			setIsAnalyzed(true);
-			setActiveTab("preview"); // Switch to preview tab on mobile after analysis
-
-		} catch (error) {
-			console.error("Error analyzing image:", error);
-			let errorMessage = "Failed to analyze image. Please try again.";
-
-			if (error instanceof Error) {
-				if (
-					error.message.includes("429") ||
-					error.message.includes("quota") ||
-					error.message.includes("RESOURCE_EXHAUSTED")
-				) {
-					errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
-				} else if (
-					error.message.includes("API_KEY") ||
-					error.message.includes("invalid") ||
-					error.message.includes("unauthorized")
-				) {
-					errorMessage = "🔑 Invalid API Key: Please check your Google Gemini API key.";
-				} else {
-					errorMessage = `❌ Error: ${error.message}`;
-				}
-			}
-
-			setError(errorMessage);
+			const url = URL.createObjectURL(blob);
+			urlsRef.current.push(url);
+			const v = { id: nextId.current++, label, url, blob };
+			setVersions((vs) => [...vs, v]);
+			setActiveId(v.id);
+			setPrompt("");
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "The design couldn't be generated. Try again.");
 		} finally {
-			setIsLoading(false);
+			setBusy(null);
 		}
 	};
 
-	// Handle editing requests with thought signatures
-	const handleEdit = async () => {
-		await handleEditWithPrompt(currentEditPrompt);
-	};
-
-	const handleReset = () => {
-		setConversationHistory([]);
-		setIsAnalyzed(false);
-		setCurrentImage(null);
-		setError(null);
-		setSelectedFile(null);
-		setPreview(null);
-		setOriginalImageData(null);
-		setCurrentEditPrompt("");
-		setDetectedRooms([]);
-		setActiveTab("controls");
-	};
-
-	// Handle room/style button clicks
-	const handleQuickPrompt = async (prompt: string) => {
-		setCurrentEditPrompt(prompt);
-		// Trigger edit with the selected prompt
-		await handleEditWithPrompt(prompt);
-	};
-
-	// Helper function to handle edit with a specific prompt
-	const handleEditWithPrompt = async (prompt: string) => {
-		if (!prompt.trim() || conversationHistory.length === 0) return;
-
-		setIsLoading(true);
-		setError(null);
-
-		if (!apiKey) {
-			setError(
-				"AI service is temporarily unavailable. Please try again later or contact support.",
-			);
-			setIsLoading(false);
-			return;
-		}
-
+	const download = async () => {
+		if (!active) return;
+		const img = await createImageBitmap(active.blob);
+		const canvas = document.createElement("canvas");
+		canvas.width = img.width;
+		canvas.height = img.height;
+		const ctx = canvas.getContext("2d")!;
+		ctx.drawImage(img, 0, 0);
 		try {
-			const ai = new GoogleGenAI({ apiKey });
-
-			// Send the full history back unchanged (images + thought signatures) so the model
-			// can edit its previous image, as required for multi-turn image editing.
-			const userTurn: ConversationTurn = { role: "user", parts: [{ text: prompt }] };
-
-			const response = await ai.models.generateContent({
-				model: IMAGE_MODEL,
-				contents: [...conversationHistory, userTurn],
-				config: GENERATION_CONFIG,
-			});
-
-			const { parts, image } = extractOutput(response);
-			if (!image) {
-				throw new Error(
-					response.promptFeedback?.blockReasonMessage ||
-						"The model did not return an image. Try rephrasing your edit.",
-				);
-			}
-			setCurrentImage(image);
-
-			const modelTurn: ConversationTurn = { role: "model", parts };
-
-			setConversationHistory([...conversationHistory, userTurn, modelTurn]);
-			setCurrentEditPrompt("");
-			setActiveTab("preview"); // Switch to preview tab on mobile after edit
-
-		} catch (error) {
-			console.error("Error editing image:", error);
-			let errorMessage = "Failed to edit image. Please try again.";
-
-			if (error instanceof Error) {
-				if (
-					error.message.includes("429") ||
-					error.message.includes("quota") ||
-					error.message.includes("RESOURCE_EXHAUSTED")
-				) {
-					errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
-				} else {
-					errorMessage = `❌ Error: ${error.message}`;
-				}
-			}
-
-			setError(errorMessage);
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
-	const handleClose = () => {
-		handleReset();
-		onClose();
-	};
-
-	// Download image with watermark
-	const handleDownloadWithWatermark = async () => {
-		if (!currentImage) return;
-
-		try {
-			// Create canvas
-			const canvas = document.createElement("canvas");
-			const ctx = canvas.getContext("2d");
-			if (!ctx) return;
-
-			// Load the generated image
-			const img = new Image();
-			img.crossOrigin = "anonymous";
-
-			await new Promise<void>((resolve, reject) => {
-				img.onload = () => resolve();
-				img.onerror = reject;
-				img.src = currentImage;
-			});
-
-			// Set canvas size to match image
-			canvas.width = img.width;
-			canvas.height = img.height;
-
-			// Draw the main image
-			ctx.drawImage(img, 0, 0);
-
-			// Load the watermark logo
 			const logo = new Image();
-			logo.crossOrigin = "anonymous";
-
-			await new Promise<void>((resolve, reject) => {
-				logo.onload = () => resolve();
-				logo.onerror = reject;
-				logo.src = "/images/dk-logo.png";
-			});
-
-			// Calculate watermark size (15% of image width, maintaining aspect ratio)
-			const watermarkWidth = canvas.width * 0.15;
-			const watermarkHeight = (logo.height / logo.width) * watermarkWidth;
-
-			// Position in bottom right with padding
-			const padding = canvas.width * 0.02;
-			const x = canvas.width - watermarkWidth - padding;
-			const y = canvas.height - watermarkHeight - padding;
-
-			// Draw watermark with reduced opacity
-			ctx.globalAlpha = 0.4;
-			ctx.drawImage(logo, x, y, watermarkWidth, watermarkHeight);
-			ctx.globalAlpha = 1.0;
-
-			// Convert to blob and download
-			canvas.toBlob(
-				(blob) => {
-					if (!blob) return;
-					const url = URL.createObjectURL(blob);
-					const link = document.createElement("a");
-					link.href = url;
-					link.download = `decorkaro-design-${Date.now()}.png`;
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
-					URL.revokeObjectURL(url);
-				},
-				"image/png",
-				1.0,
-			);
-		} catch (error) {
-			console.error("Error downloading image:", error);
-			// Fallback: download without watermark
-			const link = document.createElement("a");
-			link.href = currentImage;
-			link.download = `decorkaro-design-${Date.now()}.png`;
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
+			logo.src = "/images/dk-logo.png";
+			await logo.decode();
+			const w = canvas.width * 0.08;
+			const pad = canvas.width * 0.025;
+			ctx.globalAlpha = 0.55;
+			ctx.drawImage(logo, canvas.width - w - pad, canvas.height - w - pad, w, w);
+		} catch {
+			/* watermark is best-effort */
 		}
+		canvas.toBlob((b) => {
+			if (!b) return;
+			const a = document.createElement("a");
+			a.href = URL.createObjectURL(b);
+			a.download = `decorkaro-design-${Date.now()}.png`;
+			a.click();
+			URL.revokeObjectURL(a.href);
+		}, "image/png");
 	};
 
-	if (!isOpen) return null;
+	const disabled = Boolean(busy);
+	const hasResult = versions.length > 0;
 
 	return (
-		<AnimatePresence>
-			{isOpen && (
-				<motion.div
-					initial={{ opacity: 0 }}
-					animate={{ opacity: 1 }}
-					exit={{ opacity: 0 }}
-					className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4 bg-black bg-opacity-50"
-					onClick={handleClose}
-				>
-					<motion.div
-						initial={{ scale: 0.95, opacity: 0 }}
-						animate={{ scale: 1, opacity: 1 }}
-						exit={{ scale: 0.95, opacity: 0 }}
-						transition={{ duration: 0.2 }}
-						className="bg-white rounded-xl md:rounded-2xl shadow-2xl w-full max-w-7xl h-[98vh] md:h-[90vh] flex flex-col overflow-hidden"
-						onClick={(e) => e.stopPropagation()}
-					>
-						{/* Header */}
-						<div className="flex items-center justify-between px-3 md:px-6 py-3 md:py-4 border-b border-slate-200 bg-gradient-to-r from-yellow-50 to-slate-50">
-							<div className="flex items-center gap-2 md:gap-3 min-w-0">
-								<div className="flex items-center justify-center bg-yellow-100 rounded-full w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
-									<Sparkles className="text-yellow-500 w-4 h-4 md:w-6 md:h-6" />
+		<Dialog
+			isOpen={isOpen}
+			onClose={onClose}
+			size="xl"
+			title="AI visualiser"
+			description="Upload a floor plan or room photo. Each design takes about a minute."
+		>
+			<div className="flex h-full flex-col lg:flex-row">
+				{/* Controls */}
+				<aside className="order-2 border-t border-rule p-5 sm:p-7 lg:order-1 lg:w-[380px] lg:flex-none lg:overflow-y-auto lg:border-r lg:border-t-0">
+					{!hasResult ? (
+						<div className="space-y-7">
+							<fieldset>
+								<legend className="mb-3 text-small font-semibold">What are you uploading?</legend>
+								<div className="grid grid-cols-2 gap-2">
+									{(
+										[
+											["floor-plan", "Floor plan"],
+											["room-photo", "Room photo"],
+										] as const
+									).map(([value, label]) => (
+										<button
+											key={value}
+											type="button"
+											aria-pressed={imageType === value}
+											onClick={() => setImageType(value)}
+											className={`${imageType === value ? "chip-on" : "chip-off"} justify-center`}
+										>
+											{label}
+										</button>
+									))}
 								</div>
-								<div className="min-w-0">
-									<h2 className="font-title text-sm md:text-2xl font-bold text-slate-900 truncate">
-										AI Room Planner
-									</h2>
-									<p className="text-xs md:text-sm text-slate-600 hidden sm:block">
-										Visualize your space with AI-powered design
-									</p>
-								</div>
+								<p className="mt-2 text-micro text-slate">
+									{imageType === "floor-plan"
+										? "A 2D drawing. You'll get a furnished 3D view and a list of rooms to explore."
+										: "A photo of an empty or existing room. We keep the walls and windows and restyle the rest."}
+								</p>
+							</fieldset>
+
+							<div>
+								<p className="mb-3 text-small font-semibold">Your image</p>
+								<button
+									type="button"
+									onClick={() => fileInput.current?.click()}
+									onDragOver={(e) => e.preventDefault()}
+									onDrop={(e) => {
+										e.preventDefault();
+										chooseFile(e.dataTransfer.files[0]);
+									}}
+									className="flex w-full flex-col items-center justify-center gap-2 border border-dashed border-marquina/30 bg-limestone/50 px-4 py-8 text-center transition-colors hover:border-marquina"
+								>
+									<ImagePlus size={22} className="text-slate" aria-hidden />
+									<span className="text-small font-semibold">{upload ? upload.file.name : "Choose or drop an image"}</span>
+									<span className="text-micro text-slate">JPG, PNG or WebP, up to 15 MB</span>
+								</button>
+								<input
+									ref={fileInput}
+									type="file"
+									accept="image/png,image/jpeg,image/webp"
+									className="sr-only"
+									onChange={(e) => chooseFile(e.target.files?.[0])}
+								/>
 							</div>
-							<button
-								onClick={handleClose}
-								className="p-1.5 md:p-2 hover:bg-slate-100 rounded-full transition-colors flex-shrink-0"
-								aria-label="Close modal"
-							>
-								<X className="text-slate-600 w-5 h-5 md:w-6 md:h-6" />
+
+							<button onClick={() => run("analyze", "First design")} disabled={!upload || disabled} className="btn-primary w-full">
+								{busy ? "Generating…" : "Generate design"}
 							</button>
 						</div>
-
-						{/* Mobile Tab Switcher */}
-						<div className="flex md:hidden border-b border-slate-200">
-							<button
-								onClick={() => setActiveTab("controls")}
-								className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-									activeTab === "controls"
-										? "text-yellow-600 border-b-2 border-yellow-500 bg-yellow-50"
-										: "text-slate-600"
-								}`}
-							>
-								Controls
-							</button>
-							<button
-								onClick={() => setActiveTab("preview")}
-								className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-									activeTab === "preview"
-										? "text-yellow-600 border-b-2 border-yellow-500 bg-yellow-50"
-										: "text-slate-600"
-								}`}
-							>
-								Preview
-							</button>
-						</div>
-
-						{/* Main Content - Split Layout */}
-						<div className="flex flex-1 overflow-hidden">
-							{/* Left Navigation/Controls Panel */}
-							<div
-								className={`${
-									activeTab === "controls" ? "flex" : "hidden"
-								} md:flex w-full md:w-96 border-r border-slate-200 bg-slate-50 p-4 md:p-6 overflow-y-auto flex-col`}
-							>
-								<div className="space-y-4 md:space-y-6">
-									{/* Upload Section */}
-									{!isAnalyzed && (
-										<div>
-											<h3 className="font-title text-base md:text-lg font-semibold text-slate-900 mb-2 md:mb-3 flex items-center gap-2">
-												<Upload size={18} />
-												Upload Image
-											</h3>
-
-											{/* Image Type Selection */}
-											<div className="mb-3 md:mb-4 bg-white rounded-lg p-3 md:p-4 border border-slate-200">
-												<label className="text-xs md:text-sm font-medium text-slate-700 mb-2 md:mb-3 block">
-													Select Image Type:
-												</label>
-												<div className="space-y-2">
-													<label className="flex items-center cursor-pointer group">
-														<input
-															type="radio"
-															name="image-type"
-															value="floor-plan"
-															checked={imageType === "floor-plan"}
-															onChange={(e) =>
-																setImageType(e.target.value as "floor-plan")
-															}
-															className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-														/>
-														<span className="ml-2 md:ml-3 text-xs md:text-sm text-slate-700 group-hover:text-slate-900">
-															Floor Plan (2D drawing)
-														</span>
-													</label>
-													<label className="flex items-center cursor-pointer group">
-														<input
-															type="radio"
-															name="image-type"
-															value="room-photo"
-															checked={imageType === "room-photo"}
-															onChange={(e) =>
-																setImageType(e.target.value as "room-photo")
-															}
-															className="w-4 h-4 text-yellow-500 focus:ring-yellow-500"
-														/>
-														<span className="ml-2 md:ml-3 text-xs md:text-sm text-slate-700 group-hover:text-slate-900">
-															Room Photo (empty room)
-														</span>
-													</label>
-												</div>
-											</div>
-
-											<div
-												className="border-2 border-dashed border-slate-300 rounded-lg p-4 md:p-6 text-center hover:border-yellow-500 transition-colors cursor-pointer bg-white"
+					) : (
+						<div className="space-y-8">
+							{imageType === "floor-plan" && rooms.length > 0 && (
+								<div>
+									<p className="mb-3 text-small font-semibold">Open a room</p>
+									<div className="flex flex-wrap gap-2">
+										{rooms.map((room) => (
+											<button
+												key={room}
+												disabled={disabled}
 												onClick={() =>
-													document.getElementById("modal-room-photo")?.click()
+													run(
+														"edit",
+														room,
+														`Show a detailed eye-level view of the ${room} from this layout, photographed with DSLR quality. Keep the furniture, materials and colours consistent with the layout.`,
+													)
 												}
+												className="chip-off disabled:opacity-50"
 											>
-												{preview ? (
-													<div className="space-y-2">
-														<img
-															src={preview}
-															alt="Room preview"
-															className="w-full h-24 md:h-32 object-cover rounded-lg mx-auto"
-														/>
-														<p className="text-xs text-slate-600">
-															Click to change image
-														</p>
-													</div>
-												) : (
-													<div className="flex flex-col items-center">
-														<Upload className="text-slate-400 mb-2" size={28} />
-														<p className="text-slate-700 text-xs md:text-sm font-medium">
-															{imageType === "floor-plan"
-																? "Upload floor plan"
-																: "Upload room photo"}
-														</p>
-														<p className="text-slate-500 text-xs mt-1">
-															JPG, PNG up to 5MB
-														</p>
-													</div>
-												)}
-											</div>
-											<input
-												type="file"
-												id="modal-room-photo"
-												className="hidden"
-												accept="image/*"
-												onChange={handleFileSelect}
-											/>
-										</div>
-									)}
-
-									{/* Editing Section - shown after analysis */}
-									{isAnalyzed && (
-										<div>
-											<h3 className="font-title text-base md:text-lg font-semibold text-slate-900 mb-2 md:mb-3 flex items-center gap-2">
-												<Sparkles size={18} />
-												Edit Image
-											</h3>
-
-											{/* Quick Action Buttons - Room/Style Selection */}
-											{imageType === "floor-plan" && detectedRooms.length > 0 && (
-												<div className="mb-3 md:mb-4 bg-white rounded-lg p-3 md:p-4 border border-slate-200">
-													<label className="text-xs md:text-sm font-medium text-slate-700 mb-2 md:mb-3 block">
-														View Specific Room:
-													</label>
-													<div className="flex flex-wrap gap-1.5 md:gap-2">
-														{detectedRooms.map((room, idx) => (
-															<button
-																key={idx}
-																onClick={() =>
-																	handleQuickPrompt(
-																		`Show me a detailed view of the ${room}, photographed with DSLR quality`,
-																	)
-																}
-																disabled={isLoading}
-																className="px-2.5 md:px-4 py-1.5 md:py-2 bg-yellow-500 hover:bg-yellow-600 text-slate-900 text-xs md:text-sm font-medium rounded-lg transition-colors disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
-															>
-																{room}
-															</button>
-														))}
-													</div>
-												</div>
-											)}
-
-											{imageType === "room-photo" && (
-												<div className="mb-3 md:mb-4 bg-white rounded-lg p-3 md:p-4 border border-slate-200">
-													<label className="text-xs md:text-sm font-medium text-slate-700 mb-2 md:mb-3 block">
-														Apply Interior Style:
-													</label>
-													<div className="flex flex-wrap gap-1.5 md:gap-2">
-														{availableStyles.map((style, idx) => (
-															<button
-																key={idx}
-																onClick={() => {
-																	const description = styleDescriptions[style] || style.toLowerCase();
-																	const prompt = `Restyle this room in ${description}
-
-Maintain the original room architecture, windows, lighting direction, and proportions exactly as they are, and transform only the interior materials, finishes, furniture, and decor.
-→ Maintain architecture and lighting completely intact.
-→ Replace only finishes, color palette, furniture, and decor in the specified style.
-→ Photograph with DSLR quality, preserving natural light sources.`;
-																	handleQuickPrompt(prompt);
-																}}
-																disabled={isLoading}
-																className="px-2.5 md:px-4 py-1.5 md:py-2 bg-purple-500 hover:bg-purple-600 text-white text-xs md:text-sm font-medium rounded-lg transition-colors disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed"
-															>
-																{style.replace(" Style", "")}
-															</button>
-														))}
-													</div>
-												</div>
-											)}
-
-											<div className="space-y-2 md:space-y-3">
-												<textarea
-													value={currentEditPrompt}
-													onChange={(e) => setCurrentEditPrompt(e.target.value)}
-													placeholder="Describe your custom edit..."
-													className="w-full py-2 px-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white text-xs md:text-sm resize-none"
-													rows={3}
-												/>
-												<button
-													onClick={handleEdit}
-													disabled={!currentEditPrompt.trim() || isLoading}
-													className={`w-full py-2.5 md:py-3 px-4 md:px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 text-sm ${
-														!currentEditPrompt.trim() || isLoading
-															? "bg-slate-300 text-slate-500 cursor-not-allowed"
-															: "bg-green-500 hover:bg-green-600 text-white"
-													}`}
-												>
-													<Send size={16} />
-													{isLoading ? "Processing..." : "Apply Edit"}
-												</button>
-											</div>
-										</div>
-									)}
-
-									{/* Error Display */}
-									{error && (
-										<div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4">
-											<p className="text-red-700 text-xs md:text-sm whitespace-pre-line">
-												{error}
-											</p>
-										</div>
-									)}
-
-									{/* Action Buttons */}
-									<div className="space-y-2 md:space-y-3 pt-2 md:pt-4">
-										{!isAnalyzed ? (
-											<button
-												onClick={handleAnalyze}
-												disabled={!selectedFile || isLoading}
-												className={`w-full py-2.5 md:py-3 px-4 md:px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 text-sm ${
-													!selectedFile || isLoading
-														? "bg-slate-300 text-slate-500 cursor-not-allowed"
-														: "bg-yellow-500 hover:bg-yellow-600 text-slate-900"
-												}`}
-											>
-												<Sparkles size={18} />
-												{isLoading ? "Analyzing..." : "Generate Visualization"}
+												{room}
 											</button>
-										) : (
-											<button
-												onClick={handleReset}
-												className="w-full py-2 md:py-2.5 px-4 md:px-6 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-xs md:text-sm font-medium"
-											>
-												Upload New Image
-											</button>
-										)}
+										))}
 									</div>
+								</div>
+							)}
 
-									{/* Conversation History */}
-									{conversationHistory.length > 0 && (
-										<div className="bg-white rounded-lg p-3 md:p-4 border border-slate-200">
-											<h4 className="text-xs font-semibold text-slate-700 mb-2 md:mb-3">
-												History:
-											</h4>
-											<div className="space-y-1.5 md:space-y-2 max-h-32 md:max-h-48 overflow-y-auto">
-												{conversationHistory.map((turn, idx) => (
-													<div
-														key={idx}
-														className={`text-xs ${
-															turn.role === "user"
-																? "text-slate-900 font-medium"
-																: "text-slate-600"
-														}`}
-													>
-														<span className="font-bold">
-															{turn.role === "user" ? "👤" : "🤖"}
-														</span>{" "}
-														{(turn.parts || [])
-														.filter((part) => !part.thought)
-															.map((part) => part.text)
-															.filter(Boolean)
-															.join(" ")
-															.substring(0, 60)}
-														{(turn.parts || [])
-														.filter((part) => !part.thought)
-															.map((part) => part.text)
-															.filter(Boolean)
-															.join(" ").length > 60 && "..."}
-													</div>
-												))}
-											</div>
-										</div>
-									)}
+							<div>
+								<p className="mb-3 text-small font-semibold">Try a style</p>
+								<div className="flex flex-wrap gap-2">
+									{STYLES.map((s) => (
+										<button
+											key={s.name}
+											disabled={disabled}
+											onClick={() =>
+												run(
+													"edit",
+													`${s.name} style`,
+													`Restyle this space in ${s.description}. Keep the architecture, windows, lighting direction and proportions exactly as they are; change only finishes, colours, furniture and decor. Photograph with DSLR quality.`,
+												)
+											}
+											className="chip-off disabled:opacity-50"
+										>
+											{s.name}
+										</button>
+									))}
 								</div>
 							</div>
 
-							{/* Right Visual Preview Panel */}
-							<div
-								className={`${
-									activeTab === "preview" ? "flex" : "hidden"
-								} md:flex flex-1 bg-white p-3 md:p-6 overflow-y-auto flex-col`}
+							<form
+								onSubmit={(e) => {
+									e.preventDefault();
+									if (prompt.trim()) run("edit", prompt.trim().slice(0, 40), prompt.trim());
+								}}
 							>
-								<div className="h-full flex flex-col">
-									<h3 className="font-title text-base md:text-lg font-semibold text-slate-900 mb-3 md:mb-4 flex items-center gap-2">
-										<ImageIcon size={18} />
-										{isAnalyzed ? "Result" : "Preview"}
-									</h3>
+								<label htmlFor="planner-prompt" className="mb-3 block text-small font-semibold">
+									Describe a change
+								</label>
+								<textarea
+									id="planner-prompt"
+									value={prompt}
+									onChange={(e) => setPrompt(e.target.value)}
+									maxLength={600}
+									rows={3}
+									placeholder="Make the sofa dark green and add a wooden ceiling"
+									className="field resize-none"
+								/>
+								<button type="submit" disabled={!prompt.trim() || disabled} className="btn-primary mt-3 w-full">
+									Apply change
+								</button>
+							</form>
 
-									{!preview && !currentImage ? (
-										<div className="flex-1 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-xl min-h-[200px]">
-											<div className="text-center text-slate-400 p-4">
-												<ImageIcon
-													size={48}
-													className="mx-auto mb-2 md:mb-3 opacity-50"
-												/>
-												<p className="text-sm md:text-lg font-medium">
-													No image uploaded
-												</p>
-												<p className="text-xs md:text-sm mt-1">
-													Upload an image to get started
-												</p>
-											</div>
-										</div>
-									) : (
-										<div className="flex-1 space-y-4 md:space-y-6">
-											{/* Loading State */}
-											{isLoading && (
-												<div className="flex-1 flex items-center justify-center min-h-[300px] md:min-h-[400px] bg-slate-900 rounded-xl">
-													<div className="flex flex-col items-center justify-center space-y-6 w-full px-8">
-														{/* Animated Loader */}
-														<div className="loader-wrapper">
-															<span className="loader-letter">G</span>
-															<span className="loader-letter">e</span>
-															<span className="loader-letter">n</span>
-															<span className="loader-letter">e</span>
-															<span className="loader-letter">r</span>
-															<span className="loader-letter">a</span>
-															<span className="loader-letter">t</span>
-															<span className="loader-letter">i</span>
-															<span className="loader-letter">n</span>
-															<span className="loader-letter">g</span>
-															<div className="loader"></div>
-														</div>
-														<p className="text-slate-400 text-sm md:text-base font-secondary text-center">
-															{loadingMessage || "Creating visualization..."}
-														</p>
-
-														{/* Progress Bar */}
-														<div className="w-full max-w-xs">
-															<div className="w-full h-2 bg-slate-700 rounded-full overflow-hidden">
-																<motion.div
-																	className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-yellow-500 rounded-full"
-																	initial={{ width: 0 }}
-																	animate={{ width: `${progress}%` }}
-																	transition={{ duration: 0.3, ease: "easeOut" }}
-																/>
-															</div>
-															<div className="flex justify-between mt-2 text-xs text-slate-500">
-																<span>{Math.round(progress)}%</span>
-																<span>
-																	~{Math.max(0, ESTIMATED_TIME - Math.round(elapsedTime))}
-																	s remaining
-																</span>
-															</div>
-														</div>
-													</div>
-												</div>
-											)}
-
-											{/* Uploaded Image Preview (before analysis) */}
-											{preview && !isAnalyzed && !isLoading && (
-												<div className="bg-slate-50 rounded-xl p-3 md:p-4 border border-slate-200">
-													<h4 className="text-xs md:text-sm font-semibold text-slate-900 mb-2 md:mb-3">
-														Uploaded Image:
-													</h4>
-													<img
-														src={preview}
-														alt="Uploaded preview"
-														className="w-full h-auto object-contain rounded-lg max-h-[40vh] md:max-h-[60vh]"
-													/>
-												</div>
-											)}
-
-											{/* Current/Edited Image */}
-											{currentImage && (
-												<div className="bg-gradient-to-br from-green-50 to-slate-50 rounded-xl p-3 md:p-4 border-2 border-green-300">
-													<div className="flex items-center justify-between mb-2 md:mb-3">
-														<h4 className="text-xs md:text-sm font-semibold text-slate-900 flex items-center gap-2">
-															<Sparkles size={14} className="text-green-500" />
-															{conversationHistory.length > 2
-																? "Edited Image"
-																: "Analyzed Image"}
-														</h4>
-														<button
-															onClick={handleDownloadWithWatermark}
-															className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors"
-															title="Download with watermark"
-														>
-															<Download size={14} />
-															<span className="hidden sm:inline">Download</span>
-														</button>
-													</div>
-													<img
-														src={currentImage}
-														alt="AI processed image"
-														className="w-full h-auto object-contain rounded-lg max-h-[40vh] md:max-h-[60vh]"
-													/>
-												</div>
-											)}
-
-											{/* Analysis/Response Text */}
-											{conversationHistory.length > 0 && (
-												<div className="bg-white rounded-lg p-3 md:p-4 border border-slate-200">
-													<p className="text-xs font-semibold text-slate-700 mb-1.5 md:mb-2">
-														AI Response:
-													</p>
-													<p className="text-xs md:text-sm text-slate-600 whitespace-pre-line">
-														{(conversationHistory[conversationHistory.length - 1]?.parts || [])
-														.filter((part) => !part.thought)
-															.map((part) => part.text)
-															.filter(Boolean)
-															.join(" ")}
-													</p>
-												</div>
-											)}
-										</div>
-									)}
-								</div>
+							<div className="border-t border-rule pt-6">
+								<button onClick={onBookConsultation} className="btn-brass w-full">
+									Book a consultation for this design
+								</button>
+								<button onClick={reset} className="mt-3 inline-flex items-center gap-2 text-small text-slate hover:text-marquina">
+									<RotateCcw size={14} aria-hidden /> Start over with a new image
+								</button>
 							</div>
 						</div>
-					</motion.div>
-				</motion.div>
-			)}
-		</AnimatePresence>
+					)}
+
+					{error && (
+						<p role="alert" className="mt-6 border-l-2 border-red-700 bg-red-50 px-3 py-2.5 text-small text-red-800">
+							{error}
+						</p>
+					)}
+				</aside>
+
+				{/* Canvas */}
+				<div className="order-1 flex min-h-[46vh] flex-1 flex-col bg-limestone lg:order-2 lg:min-h-0">
+					<div className="relative flex min-h-0 flex-1 items-center justify-center p-4 sm:p-8">
+						{active ? (
+							<img
+								src={active.url}
+								alt={`Generated design: ${active.label}`}
+								className="max-h-full max-w-full object-contain shadow-[0_20px_60px_-20px_rgba(27,30,28,0.4)]"
+							/>
+						) : upload ? (
+							<img src={upload.url} alt="Your upload" className="max-h-full max-w-full object-contain" />
+						) : (
+							<div className="max-w-xs text-center">
+								<p className="text-h4 font-semibold">Your design appears here</p>
+								<p className="mt-2 text-small text-slate">Choose an image to get started.</p>
+							</div>
+						)}
+
+						{busy && (
+							<div
+								className="absolute inset-0 flex flex-col items-center justify-center bg-limestone/85 backdrop-blur-sm"
+								aria-live="polite"
+							>
+								<p className="text-h4 font-semibold">Designing: {busy}</p>
+								<div className="mt-5 h-px w-56 overflow-hidden bg-rule">
+									<div className="sweep h-px w-1/3 bg-brass" />
+								</div>
+								<p className="mt-4 text-small tabular-nums text-slate">{elapsed}s elapsed. Usually 30–60 seconds.</p>
+							</div>
+						)}
+					</div>
+
+					{hasResult && (
+						<div className="flex items-center gap-3 border-t border-rule bg-white px-4 py-3 sm:px-6">
+							<ol className="flex min-w-0 flex-1 gap-2 overflow-x-auto" aria-label="Design versions">
+								{versions.map((v) => (
+									<li key={v.id} className="flex-none">
+										<button
+											onClick={() => setActiveId(v.id)}
+											aria-current={v.id === activeId}
+											title={v.label}
+											className={`block h-12 w-16 overflow-hidden border-2 ${
+												v.id === activeId ? "border-marquina" : "border-transparent opacity-70 hover:opacity-100"
+											}`}
+										>
+											<img src={v.url} alt={v.label} className="h-full w-full object-cover" />
+										</button>
+									</li>
+								))}
+							</ol>
+							<button onClick={download} disabled={!active} className="btn-ghost flex-none py-2.5">
+								<Download size={16} aria-hidden /> Download
+							</button>
+						</div>
+					)}
+				</div>
+			</div>
+		</Dialog>
 	);
 };
 

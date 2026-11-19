@@ -1,15 +1,16 @@
-import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react";
 import Home from "./pages/Home";
+import Admin from "./pages/Admin";
 import Layout from "./components/Layout";
 
 function App() {
 	return (
 		<Router>
 			<Routes>
+				<Route path="/admin" element={<Admin />} />
 				<Route
-					path="/"
+					path="*"
 					element={
 						<Layout>
 							<Home />
