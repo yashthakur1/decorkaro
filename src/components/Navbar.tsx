@@ -1,163 +1,114 @@
-import React, { useState, useEffect } from "react";
-import { Menu, X, Phone } from "lucide-react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import GoogleFormModal from "./GoogleFormModal";
+import React, { useEffect, useState } from "react";
+import { Menu, Phone, X } from "lucide-react";
+import Logo from "./Logo";
+import { useModals } from "./ModalContext";
+import { CONTACT } from "../data/site";
+
+const LINKS = [
+	{ href: "#packages", label: "Packages" },
+	{ href: "#work", label: "Our work" },
+	{ href: "#visualiser", label: "AI visualiser" },
+	{ href: "#process", label: "How we work" },
+	{ href: "#contact", label: "Contact" },
+];
 
 const Navbar: React.FC = () => {
-	const [isOpen, setIsOpen] = useState(false);
-	const [scrolled, setScrolled] = useState(false);
-	const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+	const { openEstimate } = useModals();
+	const [solid, setSolid] = useState(false);
+	const [menuOpen, setMenuOpen] = useState(false);
 
 	useEffect(() => {
-		const handleScroll = () => {
-			const offset = window.scrollY;
-			if (offset > 50) {
-				setScrolled(true);
-			} else {
-				setScrolled(false);
-			}
-		};
-
-		window.addEventListener("scroll", handleScroll);
-		return () => {
-			window.removeEventListener("scroll", handleScroll);
-		};
+		const onScroll = () => setSolid(window.scrollY > 24);
+		onScroll();
+		window.addEventListener("scroll", onScroll, { passive: true });
+		return () => window.removeEventListener("scroll", onScroll);
 	}, []);
 
+	const onDark = !solid && !menuOpen;
+
 	return (
-		<nav className="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 lg:px-8 pt-4">
-			<div className="container mx-auto flex items-center justify-between gap-4">
-				{/* Logo - Separate Circle */}
-				<a
-					href="#"
-					onClick={(e) => {
-						e.preventDefault();
-						window.scrollTo({ top: 0, behavior: "smooth" });
-					}}
-					className="flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-slate-900 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.25)] flex-shrink-0 cursor-pointer"
-				>
-					<img
-						src="/images/dk-logo.png"
-						alt="DecorKaro"
-						className="h-8 md:h-10 w-auto brightness-0 invert"
-					/>
+		<header
+			className={`fixed inset-x-0 top-0 z-50 transition-colors duration-200 ${
+				onDark ? "bg-transparent" : "border-b border-rule bg-white/95 backdrop-blur"
+			}`}
+		>
+			<nav className="page flex h-16 items-center justify-between gap-6 md:h-[72px]" aria-label="Main">
+				<a href="#top" aria-label="DecorKaro home">
+					<Logo tone={onDark ? "light" : "dark"} />
 				</a>
 
-				{/* Main Navigation Pill */}
-				<div
-					className={`hidden md:flex items-center bg-slate-900 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.25)] transition-all duration-300 ${
-						scrolled ? "py-2 px-4" : "py-3 px-6"
-					}`}
-				>
-					<div className="flex items-center space-x-8">
-						<a
-							href="#about"
-							className="text-white hover:text-yellow-400 transition-colors font-title"
-						>
-							About
-						</a>
-						<a
-							href="#services"
-							className="text-white hover:text-yellow-400 transition-colors font-title"
-						>
-							Services
-						</a>
-						<a
-							href="#portfolio"
-							className="text-white hover:text-yellow-400 transition-colors font-title"
-						>
-							Our Work
-						</a>
-						<a
-							href="#testimonials"
-							className="text-white hover:text-yellow-400 transition-colors font-title"
-						>
-							Testimonials
-						</a>
-						<button
-							onClick={() => setIsFormModalOpen(true)}
-							className="px-5 py-2 rounded-full font-title bg-yellow-500 text-slate-900 hover:bg-yellow-400 transition-colors font-semibold"
-						>
-							Get Free Estimate
-						</button>
-					</div>
-				</div>
+				<ul className="hidden items-center gap-8 lg:flex">
+					{LINKS.map((l) => (
+						<li key={l.href}>
+							<a
+								href={l.href}
+								className={`text-small font-medium transition-colors ${
+									onDark ? "text-white/85 hover:text-white" : "text-slate hover:text-marquina"
+								}`}
+							>
+								{l.label}
+							</a>
+						</li>
+					))}
+				</ul>
 
-				{/* Mobile Navigation Toggle */}
-				<div className="flex md:hidden items-center gap-2">
+				<div className="flex items-center gap-2">
 					<a
-						href="tel:+919930845311"
-						className="p-3 rounded-full bg-slate-900 text-yellow-500 shadow-[0_8px_32px_rgba(0,0,0,0.25)]"
+						href={CONTACT.phoneHref}
+						className={`hidden text-small font-medium md:inline-flex md:items-center md:gap-2 md:pr-3 ${
+							onDark ? "text-white" : "text-marquina"
+						}`}
 					>
-						<Phone size={20} />
+						<Phone size={16} aria-hidden />
+						{CONTACT.phone}
 					</a>
+					<button onClick={openEstimate} className={`hidden sm:inline-flex ${onDark ? "btn-brass" : "btn-primary"} py-2.5`}>
+						Get a free estimate
+					</button>
 					<button
-						onClick={() => setIsOpen(!isOpen)}
-						className="p-3 rounded-full bg-slate-900 text-white shadow-[0_8px_32px_rgba(0,0,0,0.25)]"
+						onClick={() => setMenuOpen((o) => !o)}
+						className={`rounded p-2 lg:hidden ${onDark ? "text-white" : "text-marquina"}`}
+						aria-expanded={menuOpen}
+						aria-controls="mobile-menu"
+						aria-label={menuOpen ? "Close menu" : "Open menu"}
 					>
-						{isOpen ? <X size={24} /> : <Menu size={24} />}
+						{menuOpen ? <X size={22} /> : <Menu size={22} />}
 					</button>
 				</div>
-			</div>
+			</nav>
 
-			{/* Mobile Menu */}
-			{isOpen && (
-				<motion.div
-					initial={{ opacity: 0, y: -20 }}
-					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: -20 }}
-					transition={{ duration: 0.2 }}
-					className="md:hidden mt-4 mx-4 bg-slate-900 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.25)] overflow-hidden"
-				>
-					<div className="flex flex-col space-y-1 p-4">
-						<a
-							href="#about"
-							className="py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-colors"
-							onClick={() => setIsOpen(false)}
-						>
-							About
-						</a>
-						<a
-							href="#services"
-							className="py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-colors"
-							onClick={() => setIsOpen(false)}
-						>
-							Services
-						</a>
-						<a
-							href="#portfolio"
-							className="py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-colors"
-							onClick={() => setIsOpen(false)}
-						>
-							Portfolio
-						</a>
-						<a
-							href="#testimonials"
-							className="py-3 px-4 text-white hover:bg-white/10 rounded-xl transition-colors"
-							onClick={() => setIsOpen(false)}
-						>
-							Testimonials
-						</a>
+			{menuOpen && (
+				<div id="mobile-menu" className="border-t border-rule bg-white lg:hidden">
+					<ul className="page flex flex-col py-2">
+						{LINKS.map((l) => (
+							<li key={l.href}>
+								<a
+									href={l.href}
+									onClick={() => setMenuOpen(false)}
+									className="block border-b border-rule py-4 text-body font-medium last:border-0"
+								>
+									{l.label}
+								</a>
+							</li>
+						))}
+					</ul>
+					<div className="page flex flex-col gap-3 pb-6 pt-2">
 						<button
-							className="py-3 px-4 bg-yellow-500 text-slate-900 hover:bg-yellow-400 rounded-xl text-center w-full font-semibold mt-2 transition-colors"
 							onClick={() => {
-								setIsOpen(false);
-								setIsFormModalOpen(true);
+								setMenuOpen(false);
+								openEstimate();
 							}}
+							className="btn-primary w-full"
 						>
-							Get Free Estimate
+							Get a free estimate
 						</button>
+						<a href={CONTACT.phoneHref} className="btn-ghost w-full">
+							<Phone size={16} aria-hidden /> Call {CONTACT.phone}
+						</a>
 					</div>
-				</motion.div>
+				</div>
 			)}
-
-			{/* Google Form Modal */}
-			<GoogleFormModal
-				isOpen={isFormModalOpen}
-				onClose={() => setIsFormModalOpen(false)}
-			/>
-		</nav>
+		</header>
 	);
 };
 

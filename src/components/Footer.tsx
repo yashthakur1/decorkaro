@@ -1,145 +1,68 @@
 import React from "react";
-import { Instagram, Facebook, Twitter } from "lucide-react";
+import { Instagram } from "lucide-react";
+import Logo from "./Logo";
+import { CONTACT, HOME_PACKAGES } from "../data/site";
 
-const Footer: React.FC = () => {
-	return (
-		<footer className="bg-slate-900 text-white pt-16 pb-8">
-			<div className="container mx-auto px-4 md:px-6 lg:px-8">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-					{/* Logo & Description */}
-					<div>
-						<img
-							src="/images/dk-logo.png"
-							alt="DecorKaro"
-							className="h-12 w-auto mb-4 brightness-0 invert"
-						/>
-						<p className="text-slate-400 mb-6 font-secondary">
-							Transform your home with affordable modular interior packages. Choose from
-							Essentials, Premium & Luxe packages. Serving Thane and across India.
-						</p>
-						<div className="flex space-x-4">
-							<a
-								href="https://www.instagram.com/decorkaro.official/"
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-white hover:text-yellow-500 transition-colors"
-							>
-								<Instagram size={20} />
-							</a>
-							<a href="#" className="text-white hover:text-yellow-500 transition-colors">
-								<Facebook size={20} />
-							</a>
-							<a href="#" className="text-white hover:text-yellow-500 transition-colors">
-								<Twitter size={20} />
-							</a>
-						</div>
-					</div>
-
-					{/* Quick Links */}
-					<div>
-						<h4 className="font-title font-semibold text-lg mb-4">Quick Links</h4>
-						<ul className="space-y-2 font-secondary">
-							<li>
-								<a
-									href="#"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									Home
-								</a>
-							</li>
-							<li>
-								<a
-									href="#about"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									About Us
-								</a>
-							</li>
-							<li>
-								<a
-									href="#services"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									Services
-								</a>
-							</li>
-							<li>
-								<a
-									href="#portfolio"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									Portfolio
-								</a>
-							</li>
-							<li>
-								<a
-									href="#contact"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									Contact
-								</a>
-							</li>
-						</ul>
-					</div>
-
-					{/* Services */}
-					<div>
-						<h4 className="font-title font-semibold text-lg mb-4">Services</h4>
-						<ul className="space-y-2 font-secondary">
-							<li>
-								<a
-									href="#services"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									1BHK Package
-								</a>
-							</li>
-							<li>
-								<a
-									href="#services"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									2BHK Package
-								</a>
-							</li>
-							<li>
-								<a
-									href="#services"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									3BHK Package
-								</a>
-							</li>
-							<li>
-								<a
-									href="#services"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									4BHK Package
-								</a>
-							</li>
-							<li>
-								<a
-									href="#services"
-									className="text-slate-400 hover:text-yellow-500 transition-colors"
-								>
-									Modular Kitchen
-								</a>
-							</li>
-						</ul>
-					</div>
-				</div>
-
-				{/* Copyright */}
-				<div className="border-t border-slate-800 mt-12 pt-8 text-center text-slate-500">
-					<p>
-						&copy; {new Date().getFullYear()} DecorKaro Interior Design. All rights
-						reserved.
-					</p>
-				</div>
+const Footer: React.FC = () => (
+	<footer className="bg-marquina text-white/70">
+		<div className="page grid gap-12 py-16 md:grid-cols-12">
+			<div className="md:col-span-5">
+				<Logo tone="light" />
+				<p className="mt-5 max-w-sm text-small">
+					Interior design and turnkey fit-outs for homes and workplaces, from our studio in Thane.
+				</p>
+				<a
+					href={CONTACT.instagram}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="mt-6 inline-flex items-center gap-2 text-small text-white hover:text-brass-light"
+				>
+					<Instagram size={18} aria-hidden /> Instagram
+				</a>
 			</div>
-		</footer>
-	);
-};
+
+			<div className="md:col-span-2">
+				<h3 className="text-small font-semibold text-white">Studio</h3>
+				<ul className="mt-4 space-y-2.5 text-small">
+					<li><a className="hover:text-white" href="#work">Our work</a></li>
+					<li><a className="hover:text-white" href="#process">How we work</a></li>
+					<li><a className="hover:text-white" href="#visualiser">AI visualiser</a></li>
+					<li><a className="hover:text-white" href="#contact">Contact</a></li>
+				</ul>
+			</div>
+
+			<div className="md:col-span-2">
+				<h3 className="text-small font-semibold text-white">Packages</h3>
+				<ul className="mt-4 space-y-2.5 text-small">
+					{HOME_PACKAGES.map((p) => (
+						<li key={p.name}><a className="hover:text-white" href="#packages">{p.name} home</a></li>
+					))}
+					<li><a className="hover:text-white" href="#packages">Modular kitchen</a></li>
+				</ul>
+			</div>
+
+			<div className="md:col-span-3">
+				<h3 className="text-small font-semibold text-white">Visit</h3>
+				<address className="mt-4 text-small not-italic leading-relaxed">
+					{CONTACT.address.map((line) => (
+						<span key={line} className="block">{line}</span>
+					))}
+				</address>
+				<a href={CONTACT.phoneHref} className="mt-4 block text-small text-white hover:text-brass-light">
+					{CONTACT.phone}
+				</a>
+				<a href={`mailto:${CONTACT.email}`} className="mt-1 block break-all text-small text-white hover:text-brass-light">
+					{CONTACT.email}
+				</a>
+			</div>
+		</div>
+		<div className="border-t border-marquina-line">
+			<div className="page flex flex-col gap-2 py-6 text-micro text-white/50 sm:flex-row sm:justify-between">
+				<p>© {new Date().getFullYear()} DecorKaro Interior Design. All rights reserved.</p>
+				<p>Prices are starting prices and vary with layout and finishes.</p>
+			</div>
+		</div>
+	</footer>
+);
 
 export default Footer;

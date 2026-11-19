@@ -1,28 +1,24 @@
-import React from 'react';
-import HeroSection from '../components/sections/HeroSection';
-import AIAnalysisSection from '../components/sections/AIAnalysisSection';
-import AboutSection from '../components/sections/AboutSection';
-import ServicesSection from '../components/sections/ServicesSection';
-import RequirementsSection from '../components/sections/RequirementsSection';
-import PortfolioSection from '../components/sections/PortfolioSection';
-import TestimonialsSection from '../components/sections/TestimonialsSection';
-import ContactSection from '../components/sections/ContactSection';
-import WhyChooseUsSection from '../components/sections/WhyChooseUsSection';
+import React from "react";
+import HeroSection from "../components/sections/HeroSection";
+import PackagesSection from "../components/sections/PackagesSection";
+import WorkSection from "../components/sections/WorkSection";
+import VisualiserSection from "../components/sections/VisualiserSection";
+import ProcessSection from "../components/sections/ProcessSection";
+import EstimatorSection from "../components/sections/EstimatorSection";
+import TestimonialsSection from "../components/sections/TestimonialsSection";
+import ContactSection from "../components/sections/ContactSection";
 
-const Home: React.FC = () => {
-  return (
-    <div className="overflow-x-hidden">
-      <HeroSection />
-      <AIAnalysisSection />
-      <AboutSection />
-      <ServicesSection />
-      <RequirementsSection />
-      <WhyChooseUsSection />
-      <PortfolioSection />
-      <TestimonialsSection />
-      <ContactSection />
-    </div>
-  );
-};
+const Home: React.FC = () => (
+	<>
+		<HeroSection />
+		<PackagesSection />
+		<WorkSection />
+		<VisualiserSection />
+		<ProcessSection />
+		<EstimatorSection />
+		<TestimonialsSection />
+		<ContactSection />
+	</>
+);
 
 export default Home;
