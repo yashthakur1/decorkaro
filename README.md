@@ -5,7 +5,7 @@ Decorkaro is an interior design platform featuring AI-powered room redesign usin
 
 ## Features
 - **AI Room Redesign**: Upload photos of your room and get AI-generated redesigns
-- **Powered by Gemini 2.5 Flash Image**: Uses Google's "Nano Banana" image generation for fast, high-quality results
+- **Powered by Gemini Nano Banana 2.1**: Uses Google's "Nano Banana" image generation for fast, high-quality results
 - **Image-to-Image Transformation**: Maintains room structure while upgrading design elements
 - **User-friendly Interface**: Simple upload and generation workflow
 - **Secure API Key Management**: Users provide their own Google Gemini API keys
@@ -20,7 +20,7 @@ Decorkaro is an interior design platform featuring AI-powered room redesign usin
    ```
 
 ### How It Works
-The AI-powered room redesign feature uses Google's **Gemini 2.5 Flash Image** model (aka Nano Banana 🍌) to:
+The AI-powered room redesign feature uses Google's **Gemini Nano Banana 2.1** model (aka Nano Banana 🍌) to:
 1. Analyze uploaded room images
 2. Generate a redesigned version of the room with premium aesthetics
 3. Maintain the room's structure while upgrading:
@@ -36,8 +36,8 @@ The AI-powered room redesign feature uses Google's **Gemini 2.5 Flash Image** mo
 - Keys are used directly in the client for Gemini API calls
 
 ### Technical Details
-- **Package**: `@google/genai` (v1.30.0)
-- **Model**: `gemini-2.5-flash-image`
+- **Package**: `@google/genai` (v3.6)
+- **Model**: `gemini-nano-banana-2.1`
 - **Implementation**: `/src/components/sections/AIAnalysisSection.tsx`
 - **Image Processing**: Converts uploaded images to base64 for Gemini API
 - **Response**: Returns generated room redesign image + optional text description
@@ -47,7 +47,7 @@ The AI-powered room redesign feature uses Google's **Gemini 2.5 Flash Image** mo
 1. User uploads a room photo
 2. User clicks "Generate Redesign"
 3. User enters their Google Gemini API key
-4. Image is processed by Gemini 2.5 Flash Image (Nano Banana)
+4. Image is processed by Gemini Nano Banana 2.1 (Nano Banana)
 5. AI-generated room redesign is displayed
 
 ## Development
@@ -87,7 +87,7 @@ This project has evolved through several AI integrations:
 ### Key Changes
 1. **Initial**: Fal.ai flux-pro/kontext (image-to-image generation)
 2. **v2**: Google Gemini 1.5 Pro (text-based analysis and recommendations)
-3. **Current**: Google Gemini 2.5 Flash Image - Nano Banana 🍌 (AI image generation)
+3. **Current**: Google Gemini Nano Banana 2.1 - Nano Banana 🍌 (AI image generation)
 
 ### Benefits
 - **Fast Generation**: Flash model provides quick image generation
